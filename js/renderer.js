@@ -425,56 +425,65 @@ function drawStatsScreen() {
     ctx.shadowBlur = 20;
     ctx.fillText('📊 STATISTICS', 450, 70);
     ctx.shadowBlur = 0;
-    const difficulties = ['EASY', 'MEDIUM', 'HARD'];
-    const colors = ['#2ecc71', '#f1c40f', '#e67e22'];
-    const xOffsets = [180, 450, 720];
-    const cardWidth = 240, cardHeight = 330;
+    // ===== 5 TIERS: EASY, MEDIUM, HARD, ELITE, WORLD CLASS — one row, evenly spaced =====
+    const difficulties = ['EASY', 'MEDIUM', 'HARD', 'ELITE', 'WORLD_CLASS'];
+    const displayLabels = { EASY: 'EASY', MEDIUM: 'MEDIUM', HARD: 'HARD', ELITE: 'ELITE', WORLD_CLASS: 'WORLD CLASS' };
+    const colors = ['#2ecc71', '#f1c40f', '#e74c3c', '#9b59b6', '#00d2ff'];
+    const cardWidth = 164, cardGap = 8, cardHeight = 380;
+    const totalWidth = difficulties.length * cardWidth + (difficulties.length - 1) * cardGap;
+    const marginX = (900 - totalWidth) / 2;
+    const y = 100;
+
     difficulties.forEach((diff, idx) => {
         const stats = overallStats[diff];
-        const x = xOffsets[idx] - cardWidth/2;
-        const y = 110;
+        const x = marginX + idx * (cardWidth + cardGap);
+        const centerX = x + cardWidth / 2;
+
         ctx.fillStyle = 'rgba(255,255,255,0.04)';
         ctx.beginPath();
-        ctx.roundRect(x, y, cardWidth, cardHeight, 16);
+        ctx.roundRect(x, y, cardWidth, cardHeight, 14);
         ctx.fill();
         ctx.strokeStyle = colors[idx];
         ctx.lineWidth = 2;
         ctx.stroke();
+
+        ctx.textAlign = 'center';
         ctx.fillStyle = colors[idx];
-        ctx.font = '700 22px Outfit, sans-serif';
-        ctx.fillText(diff, xOffsets[idx], y + 40);
-        ctx.fillStyle = 'rgba(255,255,255,0.7)';
-        ctx.font = '600 14px Outfit, sans-serif';
+        ctx.font = '700 16px Outfit, sans-serif';
+        ctx.fillText(displayLabels[diff], centerX, y + 32);
+
         const lines = [
             `Matches: ${stats.matches}`,
-            `Goals Scored: ${stats.goalsScored}`,
-            `Goals Conceded: ${stats.goalsConceded}`,
+            `Goals For: ${stats.goalsScored}`,
+            `Goals Against: ${stats.goalsConceded}`,
             `Best Win: ${stats.bestWinScore}`,
-            `Worst Defeat: ${stats.worstDefeatScore}`,
-            `Avg Possession: ${stats.matches ? Math.round((stats.possessionTotal / stats.matches) * 100) : 0}%`,
+            `Worst Loss: ${stats.worstDefeatScore}`,
+            `Avg Poss: ${stats.matches ? Math.round((stats.possessionTotal / stats.matches) * 100) : 0}%`,
             `Total Passes: ${stats.passesTotal}`,
-            `Opponent GK Saves: ${stats.gkSavesTotal}`
+            `Opp GK Saves: ${stats.gkSavesTotal}`
         ];
         lines.forEach((line, i) => {
-            ctx.fillStyle = 'rgba(255,255,255,0.6)';
-            ctx.font = '500 13px Outfit, sans-serif';
-            ctx.fillText(line, xOffsets[idx], y + 80 + i * 28);
+            ctx.fillStyle = 'rgba(255,255,255,0.65)';
+            ctx.font = '500 11px Outfit, sans-serif';
+            ctx.fillText(line, centerX, y + 66 + i * 22);
         });
     });
+
     ctx.fillStyle = 'rgba(155, 89, 182, 0.2)';
     ctx.beginPath();
-    ctx.roundRect(350, 460, 200, 45, 12);
+    ctx.roundRect(350, 500, 200, 45, 12);
     ctx.fill();
     ctx.strokeStyle = '#9b59b6';
     ctx.lineWidth = 2;
     ctx.stroke();
     ctx.fillStyle = '#9b59b6';
     ctx.font = '700 18px Outfit, sans-serif';
-    ctx.fillText('← BACK', 450, 490);
-    window._backBtn = { x: 350, y: 460, w: 200, h: 45 };
+    ctx.textAlign = 'center';
+    ctx.fillText('← BACK', 450, 530);
+    window._backBtn = { x: 350, y: 500, w: 200, h: 45 };
     ctx.fillStyle = 'rgba(255,255,255,0.2)';
     ctx.font = '600 12px Outfit, sans-serif';
-    ctx.fillText('Press ESC or tap BACK to return', 450, 530);
+    ctx.fillText('Press ESC or tap BACK to return', 450, 565);
     ctx.restore();
 }
 
@@ -887,9 +896,13 @@ function drawTournamentBracket() {
     const round3 = bracket[3]?.matches || [];
 
     // ===== LAYOUT CONSTANTS =====
-    const boxWidth = 130;
+    // Columns across the 900px canvas, left-to-right: R16(L), QF(L), SF(L), FINAL, SF(R), QF(R), R16(R)
+    // boxWidth/gapX are chosen so all 7 columns fit with even gaps and the SF boxes
+    // never overlap the FINAL box (the old layout used a wider box that collided here).
+    const boxWidth = 110;
     const boxHeight = 34;
     const gapY = 10;
+    const gapX = 15;
     const startY = 70;
     const totalHeight = 450;
 
@@ -910,10 +923,19 @@ function drawTournamentBracket() {
     const leftY = getYPositions(leftMatches.length, startY, totalHeight, boxHeight, gapY);
     const rightY = getYPositions(rightMatches.length, startY, totalHeight, boxHeight, gapY);
 
-    // X positions for each round
-    const leftX = [30, 180, 310];
-    const rightX = [740, 590, 460];
-    const finalX = 450 - boxWidth / 2;
+    // X positions for each round — evenly spaced, symmetric around the canvas center (450)
+    const marginX = (900 - (7 * boxWidth + 6 * gapX)) / 2;
+    const col0 = marginX;                          // R16 outer columns
+    const col1 = col0 + boxWidth + gapX;            // QF columns
+    const col2 = col1 + boxWidth + gapX;            // SF columns
+    const col3 = col2 + boxWidth + gapX;            // FINAL (centered)
+    const col4 = col3 + boxWidth + gapX;            // SF (right)
+    const col5 = col4 + boxWidth + gapX;            // QF (right)
+    const col6 = col5 + boxWidth + gapX;            // R16 (right)
+
+    const leftX = [col0, col1, col2];
+    const rightX = [col6, col5, col4];
+    const finalX = col3;
 
     // ===== DRAW LEFT HALF (GROUPS A-D) =====
     ctx.textAlign = 'center';
