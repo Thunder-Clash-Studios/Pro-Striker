@@ -178,7 +178,7 @@ function initMatch(teamAId, teamBId) {
 
     aiTimer = 0; aiDribbleTime = 0; aiPassCooldown = 0; aiHoldBallTimer = 0;
     aiState = 'CHASE'; aiStateTimer = 0; gkTimer = 0;
-    aiStartDelay = 60; aiReactionTimer = 20;
+    aiStartDelay = 42; aiReactionTimer = 20; // 42 frames ≈ 0.7s at 60fps
     activeLocks.red = { player: null, timer: 0 };
     activeLocks.blue = { player: null, timer: 0 };
 }
@@ -190,7 +190,7 @@ function resetField() {
     ball.trail = [];
     aiTimer = 0; aiDribbleTime = 0; aiPassCooldown = 0; aiHoldBallTimer = 0;
     aiState = 'CHASE'; aiStateTimer = 0; gkTimer = 0;
-    aiStartDelay = 60; aiReactionTimer = 20;
+    aiStartDelay = 42; aiReactionTimer = 20; // 42 frames ≈ 0.7s at 60fps
     activeLocks.red = { player: null, timer: 0 };
     activeLocks.blue = { player: null, timer: 0 };
     let outfielders = players.filter(p => !p.isGk);
