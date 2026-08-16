@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>⚽ Pro Striker – Ultimate Football</title>
     <link rel="stylesheet" href="style.css" />
     <style>
@@ -54,6 +57,10 @@
     </style>
 </head>
 <body>
+    <button id="fullscreenBtn" class="fullscreen-btn" aria-label="Toggle fullscreen" style="display:none;">
+        <svg id="fsIconExpand" viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M4 4h6v2H6v4H4V4zm14 0h-6v2h4v4h2V4zM4 20h6v-2H6v-4H4v6zm14 0h-6v-2h4v-4h2v6z"/></svg>
+        <svg id="fsIconCompress" viewBox="0 0 24 24" width="20" height="20" style="display:none;"><path fill="currentColor" d="M8 4H6v4H4v2h6V4h-2v0zm10 0h-2v6h6V8h-4V4zM4 14v2h4v4h2v-6H4zm14 0h-6v6h2v-4h4v-2z"/></svg>
+    </button>
     <div id="gameWrapper" class="game-wrapper">
         <div id="loadingScreen">
             <div class="loader"></div>
@@ -121,6 +128,69 @@
         window.addEventListener('resize', checkOrientation);
         window.addEventListener('orientationchange', checkOrientation);
         checkOrientation();
+
+        // ===== FULLSCREEN TOGGLE =====
+        (function() {
+            const fsBtn = document.getElementById('fullscreenBtn');
+            const iconExpand = document.getElementById('fsIconExpand');
+            const iconCompress = document.getElementById('fsIconCompress');
+            const fsTarget = document.documentElement;
+
+            function fsRequest(el) {
+                const fn = el.requestFullscreen || el.webkitRequestFullscreen ||
+                           el.mozRequestFullScreen || el.msRequestFullscreen;
+                return fn ? fn.call(el) : Promise.reject('Fullscreen not supported');
+            }
+            function fsExit() {
+                const fn = document.exitFullscreen || document.webkitExitFullscreen ||
+                           document.mozCancelFullScreen || document.msExitFullscreen;
+                return fn ? fn.call(document) : Promise.reject('Fullscreen not supported');
+            }
+            function fsElement() {
+                return document.fullscreenElement || document.webkitFullscreenElement ||
+                       document.mozFullScreenElement || document.msFullscreenElement || null;
+            }
+            function fsSupported() {
+                return !!(document.fullscreenEnabled || document.webkitFullscreenEnabled ||
+                          document.mozFullScreenEnabled || document.msFullscreenEnabled);
+            }
+
+            const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
+            // iOS Safari does not support the Fullscreen API for arbitrary elements —
+            // hide the button there rather than show one that silently does nothing.
+            if (isMobile && fsSupported() && fsBtn) {
+                fsBtn.style.display = 'flex';
+            }
+
+            function updateIcon() {
+                const active = !!fsElement();
+                if (iconExpand) iconExpand.style.display = active ? 'none' : 'block';
+                if (iconCompress) iconCompress.style.display = active ? 'block' : 'none';
+            }
+
+            if (fsBtn) {
+                fsBtn.addEventListener('click', () => {
+                    if (fsElement()) {
+                        fsExit().catch(() => {});
+                        if (window.screen && screen.orientation && screen.orientation.unlock) {
+                            try { screen.orientation.unlock(); } catch (e) {}
+                        }
+                    } else {
+                        fsRequest(fsTarget).then(() => {
+                            if (window.screen && screen.orientation && screen.orientation.lock) {
+                                screen.orientation.lock('landscape').catch(() => {});
+                            }
+                        }).catch(() => {});
+                    }
+                });
+            }
+
+            ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange']
+                .forEach(evt => document.addEventListener(evt, () => {
+                    updateIcon();
+                    checkOrientation();
+                }));
+        })();
     </script>
 </body>
 </html>
