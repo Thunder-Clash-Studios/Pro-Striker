@@ -273,7 +273,7 @@ const TournamentManager = {
 
     getPlayerNextMatch() {
         const playerTeamId = this.selectedTeamId;
-        if (!playerTeamId || this.tournamentComplete || this.isPlayerOut) return null;
+        if (playerTeamId === null || playerTeamId === undefined || this.tournamentComplete || this.isPlayerOut) return null;
 
         // GROUP STAGE
         if (!this.groupStageComplete) {
