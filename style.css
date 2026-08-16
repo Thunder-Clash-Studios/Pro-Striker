@@ -143,6 +143,37 @@ canvas { display: block; width: 100%; height: 100%; background: #1a1a2e; image-r
 .mode-pve .p1-shoot { bottom:20px; right:20px; }
 .mode-pve .p2-joy, .mode-pve .p2-shoot { display:none !important; }
 
+/* Push controls clear of notches / home-indicator bars when fullscreen on mobile.
+   Applied as padding on the shared parent so it works at every breakpoint below,
+   instead of needing to be duplicated on each button/joystick rule. */
+.touch-controls {
+    padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+             env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+
+.fullscreen-btn {
+    position: absolute;
+    top: calc(12px + env(safe-area-inset-top, 0px));
+    right: calc(12px + env(safe-area-inset-right, 0px));
+    width: 38px;
+    height: 38px;
+    background: rgba(15,20,25,0.7);
+    border: 1.5px solid rgba(255,255,255,0.25);
+    border-radius: 50%;
+    color: rgba(255,255,255,0.85);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 50;
+    cursor: pointer;
+    pointer-events: auto;
+    touch-action: manipulation;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    transition: transform 0.15s ease, background 0.15s ease;
+}
+.fullscreen-btn:active { transform: scale(0.88); background: rgba(15,20,25,0.9); }
+
 @media (max-width: 420px) {
     .joystick-base {
         width: 55px !important;
