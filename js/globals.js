@@ -55,9 +55,11 @@ let matchStats = {
 };
 
 let overallStats = {
-    EASY:   { matches: 0, goalsScored: 0, goalsConceded: 0, bestWinDiff: -Infinity, bestWinScore: '---', bestWinGoals: 0, worstDefeatDiff: Infinity, worstDefeatScore: '---', worstDefeatGoalsConceded: 0, possessionTotal: 0, passesTotal: 0, gkSavesTotal: 0 },
-    MEDIUM: { matches: 0, goalsScored: 0, goalsConceded: 0, bestWinDiff: -Infinity, bestWinScore: '---', bestWinGoals: 0, worstDefeatDiff: Infinity, worstDefeatScore: '---', worstDefeatGoalsConceded: 0, possessionTotal: 0, passesTotal: 0, gkSavesTotal: 0 },
-    HARD:   { matches: 0, goalsScored: 0, goalsConceded: 0, bestWinDiff: -Infinity, bestWinScore: '---', bestWinGoals: 0, worstDefeatDiff: Infinity, worstDefeatScore: '---', worstDefeatGoalsConceded: 0, possessionTotal: 0, passesTotal: 0, gkSavesTotal: 0 }
+    EASY:        { matches: 0, goalsScored: 0, goalsConceded: 0, bestWinDiff: -Infinity, bestWinScore: '---', bestWinGoals: 0, worstDefeatDiff: Infinity, worstDefeatScore: '---', worstDefeatGoalsConceded: 0, possessionTotal: 0, passesTotal: 0, gkSavesTotal: 0 },
+    MEDIUM:      { matches: 0, goalsScored: 0, goalsConceded: 0, bestWinDiff: -Infinity, bestWinScore: '---', bestWinGoals: 0, worstDefeatDiff: Infinity, worstDefeatScore: '---', worstDefeatGoalsConceded: 0, possessionTotal: 0, passesTotal: 0, gkSavesTotal: 0 },
+    HARD:        { matches: 0, goalsScored: 0, goalsConceded: 0, bestWinDiff: -Infinity, bestWinScore: '---', bestWinGoals: 0, worstDefeatDiff: Infinity, worstDefeatScore: '---', worstDefeatGoalsConceded: 0, possessionTotal: 0, passesTotal: 0, gkSavesTotal: 0 },
+    ELITE:       { matches: 0, goalsScored: 0, goalsConceded: 0, bestWinDiff: -Infinity, bestWinScore: '---', bestWinGoals: 0, worstDefeatDiff: Infinity, worstDefeatScore: '---', worstDefeatGoalsConceded: 0, possessionTotal: 0, passesTotal: 0, gkSavesTotal: 0 },
+    WORLD_CLASS: { matches: 0, goalsScored: 0, goalsConceded: 0, bestWinDiff: -Infinity, bestWinScore: '---', bestWinGoals: 0, worstDefeatDiff: Infinity, worstDefeatScore: '---', worstDefeatGoalsConceded: 0, possessionTotal: 0, passesTotal: 0, gkSavesTotal: 0 }
 };
 
 let currentRank = 'Bronze';
