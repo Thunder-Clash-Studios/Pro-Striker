@@ -611,17 +611,24 @@ setupJoystick(document.getElementById('p2Joystick'), (up, down, left, right) => 
 });
 
 function bindShootButton(btnElem, keyName) {
+    // Only sets the same key flag the keyboard uses (keys.space for P1/red,
+    // keys.enter for P2/blue). main.js's own update loop already checks
+    // `ball.owner.team === 'red' && keys.space` (and the blue/enter equivalent)
+    // before shooting, so this button can never fire for the wrong team.
     const press = (e) => {
         e.preventDefault();
         initSoundOnInteraction();
         keys[keyName] = true;
-        if (ball.owner && !ball.owner.isGk) {
-            shootBall(ball.owner);
-            keys[keyName] = false;
-        }
+    };
+    const release = (e) => {
+        if (e) e.preventDefault();
+        keys[keyName] = false;
     };
     btnElem.addEventListener('touchstart', press, { passive: false });
+    btnElem.addEventListener('touchend', release, { passive: false });
+    btnElem.addEventListener('touchcancel', release, { passive: false });
     btnElem.addEventListener('mousedown', press);
+    btnElem.addEventListener('mouseup', release);
 }
 
 bindShootButton(document.getElementById('p1Shoot'), 'space');
