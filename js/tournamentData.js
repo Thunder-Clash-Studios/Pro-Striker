@@ -51,7 +51,7 @@ const TOURNAMENT_TEAMS = [
     { id: 20, name: 'Denmark', flag: '🇩🇰', color: TEAM_COLORS['Denmark'], rating: 77, tier: 'COMPETITIVE' },
     { id: 24, name: 'Ecuador', flag: '🇪🇨', color: TEAM_COLORS['Ecuador'], rating: 73, tier: 'CHALLENGER' },
     { id: 23, name: 'Egypt', flag: '🇪🇬', color: TEAM_COLORS['Egypt'], rating: 74, tier: 'CHALLENGER' },
-    { id: 3, name: 'England', flag: 'EN', color: TEAM_COLORS['England'], rating: 89, tier: 'WORLD_CLASS' },
+    { id: 3, name: 'England', flag: '🏴', color: TEAM_COLORS['England'], rating: 89, tier: 'WORLD_CLASS' },
     { id: 2, name: 'France', flag: '🇫🇷', color: TEAM_COLORS['France'], rating: 90, tier: 'WORLD_CLASS' },
     { id: 11, name: 'Germany', flag: '🇩🇪', color: TEAM_COLORS['Germany'], rating: 83, tier: 'ELITE' },
     { id: 21, name: 'Iran', flag: '🇮🇷', color: TEAM_COLORS['Iran'], rating: 76, tier: 'COMPETITIVE' },
@@ -117,6 +117,50 @@ const MATCH_PROBABILITIES = {
         'WORLD_CLASS': { win: 40, draw: 30, loss: 30 }
     }
 };
+
+// ===== FLAG IMAGES (fixes flags missing on laptop / England missing on phone) =====
+// Emoji flags depend on the OS shipping flag glyphs in its emoji font. Windows
+// ships NO flag glyphs at all (that's why every flag was blank on laptop), and
+// England's flag is a special 4-byte "tag sequence" emoji that a lot of phone
+// fonts don't support even when normal country flags work fine. Real flag
+// images render identically everywhere, so we load small PNGs from flagcdn.com
+// (a free, CORS-friendly flag CDN) keyed by ISO country code, and fall back to
+// the emoji only for the brief moment before an image has finished loading.
+const TEAM_FLAG_CODES = {
+    'Algeria': 'dz', 'Australia': 'au', 'Austria': 'at', 'Argentina': 'ar',
+    'Belgium': 'be', 'Brazil': 'br', 'Canada': 'ca', 'Colombia': 'co',
+    'Croatia': 'hr', "Côte d'Ivoire": 'ci', 'Denmark': 'dk', 'Ecuador': 'ec',
+    'Egypt': 'eg', 'England': 'gb-eng', 'France': 'fr', 'Germany': 'de',
+    'Iran': 'ir', 'Italy': 'it', 'Japan': 'jp', 'Mexico': 'mx',
+    'Morocco': 'ma', 'Netherlands': 'nl', 'Nigeria': 'ng', 'Norway': 'no',
+    'Portugal': 'pt', 'Senegal': 'sn', 'South Korea': 'kr', 'Spain': 'es',
+    'Switzerland': 'ch', 'Türkiye': 'tr', 'Uruguay': 'uy', 'USA': 'us'
+};
+
+const FlagImages = {
+    cache: {},
+    load(code) {
+        if (!code) return null;
+        if (this.cache[code]) return this.cache[code];
+        const img = new Image();
+        img.src = `https://flagcdn.com/w80/${code}.png`;
+        this.cache[code] = img;
+        return img;
+    },
+    // Returns a ready-to-draw <img> for this team, or null if it hasn't
+    // finished loading yet (caller should fall back to the emoji in that case).
+    get(team) {
+        if (!team) return null;
+        const code = TEAM_FLAG_CODES[team.name];
+        if (!code) return null;
+        const img = this.cache[code] || this.load(code);
+        return (img && img.complete && img.naturalWidth > 0) ? img : null;
+    }
+};
+
+// Kick off preloading immediately so flags are already cached by the time the
+// team-select / bracket / result screens render.
+TOURNAMENT_TEAMS.forEach(t => FlagImages.load(TEAM_FLAG_CODES[t.name]));
 
 function getTeamById(id) { return TOURNAMENT_TEAMS.find(t => t.id === id); }
 function getTeamTier(team) { return team.tier; }
