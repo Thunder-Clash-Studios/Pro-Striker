@@ -1,6 +1,76 @@
 // ===== PRO STRIKER - renderer.js =====
 console.log('[ProStriker] renderer.js loaded');
 
+// ===== FLAG DRAWING HELPERS =====
+// Draws a team's flag as a real image (see FlagImages in tournamentData.js)
+// instead of the unreliable emoji, falling back to the emoji only until the
+// image has loaded. `size` is the flag height in px; width follows a 4:3 flag
+// ratio. `y` is treated as a text baseline so it lines up with adjacent text.
+// Returns the total width consumed (flag + small gap) for laying out text after it.
+function drawTeamFlag(team, x, y, size, align = 'left') {
+    const h = size;
+    const w = Math.round(size * 1.33);
+    const gap = Math.max(3, Math.round(size * 0.25));
+    let drawX = x;
+    if (align === 'center') drawX = x - w / 2;
+    else if (align === 'right') drawX = x - w;
+
+    const img = (typeof FlagImages !== 'undefined') ? FlagImages.get(team) : null;
+    if (img) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.roundRect(drawX, y - h * 0.82, w, h, 1.5);
+        ctx.clip();
+        ctx.drawImage(img, drawX, y - h * 0.82, w, h);
+        ctx.restore();
+    } else {
+        const prevAlign = ctx.textAlign;
+        const prevFont = ctx.font;
+        ctx.font = `${Math.round(size)}px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",Arial,sans-serif`;
+        ctx.textAlign = align;
+        ctx.fillText((team && team.flag) || '⚽', align === 'center' ? x : (align === 'right' ? x : x), y);
+        ctx.textAlign = prevAlign;
+        ctx.font = prevFont;
+    }
+    return w + gap;
+}
+
+// Draws a single centered line made of text/team-flag segments, e.g.
+// fillTextWithFlags(['🏆 ', champion, ' ARE CHAMPIONS!'], 450, 200, '700 20px Outfit, sans-serif', '#f1c40f')
+// Pass a team object anywhere a flag should appear inline.
+function fillTextWithFlags(segments, cx, y, font, color) {
+    ctx.font = font;
+    ctx.fillStyle = color;
+    const sizeMatch = font.match(/(\d+)px/);
+    const flagH = sizeMatch ? parseInt(sizeMatch[1], 10) * 0.62 : 14;
+    const flagW = Math.round(flagH * 1.33) + Math.max(3, Math.round(flagH * 0.25));
+
+    let totalW = 0;
+    const parts = segments.map(seg => {
+        if (typeof seg === 'string') {
+            const w = ctx.measureText(seg).width;
+            totalW += w;
+            return { type: 'text', value: seg, w };
+        } else {
+            totalW += flagW;
+            return { type: 'flag', team: seg, w: flagW };
+        }
+    });
+
+    let cursorX = cx - totalW / 2;
+    const prevAlign = ctx.textAlign;
+    ctx.textAlign = 'left';
+    parts.forEach(p => {
+        if (p.type === 'text') {
+            ctx.fillText(p.value, cursorX, y);
+        } else {
+            drawTeamFlag(p.team, cursorX, y, flagH, 'left');
+        }
+        cursorX += p.w;
+    });
+    ctx.textAlign = prevAlign;
+}
+
 function drawPitch() {
     const stripeWidth = (875 - 25) / 10;
     for (let i = 0; i < 10; i++) {
@@ -611,9 +681,7 @@ function drawTeamSelection() {
         ctx.strokeStyle = isSelected ? '#f1c40f' : 'rgba(255,255,255,0.08)';
         ctx.lineWidth = isSelected ? 2.5 : 1.5;
         ctx.stroke();
-        ctx.font = '22px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", Arial, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(team.flag || '⚽', x + cardW / 2, y + 26);
+        drawTeamFlag(team, x + cardW / 2, y + 30, 22, 'center');
         ctx.fillStyle = isSelected ? '#f1c40f' : '#ffffff';
         ctx.font = isSelected ? '700 10px Outfit, sans-serif' : '600 9px Outfit, sans-serif';
         ctx.textAlign = 'center';
@@ -739,9 +807,9 @@ function drawGroupStage() {
             ctx.textAlign = 'left';
             ctx.fillStyle = isPlayerTeam ? '#f1c40f' : 'rgba(255,255,255,0.8)';
             ctx.font = isPlayerTeam ? '700 10px Outfit, sans-serif' : '500 10px Outfit, sans-serif';
-            const flag = team ? team.flag : '❓';
             const name = team ? (team.name.length > 8 ? team.name.slice(0, 8) : team.name) : '???';
-            ctx.fillText(`${flag} ${name}`, x + 6, yPos + 8);
+            const flagW = drawTeamFlag(team || { flag: '❓' }, x + 6, yPos + 8, 10, 'left');
+            ctx.fillText(name, x + 6 + flagW, yPos + 8);
             ctx.textAlign = 'center';
             ctx.fillStyle = 'rgba(255,255,255,0.7)';
             ctx.font = '500 10px Outfit, sans-serif';
@@ -806,7 +874,7 @@ function drawGroupStage() {
             ctx.shadowColor = '#e74c3c';
             ctx.shadowBlur = 15;
             if (champion) {
-                ctx.fillText(`❌ YOU ARE OUT! 🏆 ${champion.flag} ${champion.name} WON!`, 450, 548);
+                fillTextWithFlags(['❌ YOU ARE OUT! 🏆 ', champion, ` ${champion.name} WON!`], 450, 548, ctx.font, ctx.fillStyle);
             } else {
                 ctx.fillText('❌ YOU ARE OUT OF THE WORLD CUP', 450, 548);
             }
@@ -1183,7 +1251,7 @@ function drawTournamentBracket() {
             ctx.font = '700 20px Outfit, sans-serif';
             ctx.shadowColor = '#f1c40f';
             ctx.shadowBlur = 20;
-            ctx.fillText(`🏆 ${champion.flag} ${champion.name} ARE CHAMPIONS!`, 450, buttonY + 30);
+            fillTextWithFlags(['🏆 ', champion, ` ${champion.name} ARE CHAMPIONS!`], 450, buttonY + 30, ctx.font, ctx.fillStyle);
             ctx.shadowBlur = 0;
             window._tournamentChampionBtn = { x: 250, y: buttonY, w: 400, h: 45 };
         }
@@ -1259,7 +1327,8 @@ function drawBracketMatchBox(ctx, match, x, y, width, height, playerTeamId, isFi
     ctx.fillStyle = isWinnerA ? '#2ecc71' : 'rgba(255,255,255,0.85)';
     ctx.font = isPlayerMatch ? '700 10px Outfit, sans-serif' : '500 9px Outfit, sans-serif';
     const nameA = teamA.name.length > 10 ? teamA.name.slice(0, 10) : teamA.name;
-    ctx.fillText(`${teamA.flag} ${nameA}`, x + 6, y + 15);
+    const flagWA = drawTeamFlag(teamA, x + 6, y + 15, 9, 'left');
+    ctx.fillText(nameA, x + 6 + flagWA, y + 15);
 
     // Score / Status (Right side)
     ctx.textAlign = 'right';
@@ -1285,7 +1354,8 @@ function drawBracketMatchBox(ctx, match, x, y, width, height, playerTeamId, isFi
     ctx.fillStyle = isWinnerB ? '#2ecc71' : 'rgba(255,255,255,0.7)';
     ctx.font = isPlayerMatch ? '700 10px Outfit, sans-serif' : '500 9px Outfit, sans-serif';
     const nameB = teamB.name.length > 10 ? teamB.name.slice(0, 10) : teamB.name;
-    ctx.fillText(`${teamB.flag} ${nameB}`, x + 6, y + height - 4);
+    const flagWB = drawTeamFlag(teamB, x + 6, y + height - 4, 9, 'left');
+    ctx.fillText(nameB, x + 6 + flagWB, y + height - 4);
 
     // Player indicator
     if (isPlayerMatch) {
@@ -1331,7 +1401,8 @@ function drawMatchBox(ctx, match, x, y, width, height, playerTeamId, isFinal = f
     ctx.fillStyle = isWinnerA ? '#2ecc71' : 'rgba(255,255,255,0.8)';
     ctx.font = isPlayerMatch ? '600 9px Outfit, sans-serif' : '500 8px Outfit, sans-serif';
     const nameA = teamA.name.length > 8 ? teamA.name.slice(0,8) : teamA.name;
-    ctx.fillText(`${teamA.flag} ${nameA}`, x + 4, y + 12);
+    const flagWA2 = drawTeamFlag(teamA, x + 4, y + 12, 7, 'left');
+    ctx.fillText(nameA, x + 4 + flagWA2, y + 12);
 
     ctx.textAlign = 'right';
     if (isPlayed) {
@@ -1354,7 +1425,8 @@ function drawMatchBox(ctx, match, x, y, width, height, playerTeamId, isFinal = f
     ctx.fillStyle = isWinnerB ? '#2ecc71' : 'rgba(255,255,255,0.7)';
     ctx.font = isPlayerMatch ? '600 9px Outfit, sans-serif' : '500 8px Outfit, sans-serif';
     const nameB = teamB.name.length > 8 ? teamB.name.slice(0,8) : teamB.name;
-    ctx.fillText(`${teamB.flag} ${nameB}`, x + 4, y + height - 3);
+    const flagWB2 = drawTeamFlag(teamB, x + 4, y + height - 3, 7, 'left');
+    ctx.fillText(nameB, x + 4 + flagWB2, y + height - 3);
 
     if (isPlayerMatch) {
         ctx.fillStyle = 'rgba(241,196,15,0.2)';
@@ -1449,9 +1521,7 @@ function drawTournamentResult(matchResult) {
     if (matchResult) {
         const teamA = matchResult.teamA || { name: 'Unknown', flag: '❓' };
         const teamB = matchResult.teamB || { name: 'Unknown', flag: '❓' };
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '900 52px Outfit, sans-serif';
-        ctx.fillText(`${teamA.flag} ${matchResult.scoreA} - ${matchResult.scoreB} ${teamB.flag}`, 450, 200);
+        fillTextWithFlags([teamA, ` ${matchResult.scoreA} - ${matchResult.scoreB} `, teamB], 450, 200, '900 52px Outfit, sans-serif', '#ffffff');
         ctx.fillStyle = 'rgba(255,255,255,0.4)';
         ctx.font = '600 20px Outfit, sans-serif';
         ctx.fillText(`${teamA.name} vs ${teamB.name}`, 450, 250);
@@ -1480,7 +1550,7 @@ function drawTournamentResult(matchResult) {
         ctx.font = '700 24px Outfit, sans-serif';
         ctx.shadowColor = '#f1c40f';
         ctx.shadowBlur = 15;
-        ctx.fillText(`🏆 Champion: ${champion.flag} ${champion.name}`, 450, 350);
+        fillTextWithFlags(['🏆 Champion: ', champion, ` ${champion.name}`], 450, 350, ctx.font, ctx.fillStyle);
         ctx.shadowBlur = 0;
     }
 
@@ -1556,9 +1626,7 @@ function drawChampionCelebration() {
     ctx.shadowBlur = 0;
 
     if (champion) {
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '700 32px Outfit, sans-serif';
-        ctx.fillText(`${champion.flag} ${champion.name}`, 450, 290);
+        fillTextWithFlags([champion, ` ${champion.name}`], 450, 290, '700 32px Outfit, sans-serif', '#ffffff');
     }
 
     if (isPlayerChampion) {
