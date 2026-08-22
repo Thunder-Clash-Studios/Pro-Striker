@@ -243,15 +243,28 @@ canvas.addEventListener('pointerdown', (e) => {
             currentState = 'MENU';
         }
     } else if (currentState === 'TOURNAMENT_TEAM_SELECT') {
+        // On touch, don't select the card yet — every finger-down that begins a
+        // scroll swipe also lands on top of some card, so selecting immediately
+        // on pointerdown made the grid feel like it couldn't be scrolled. We just
+        // remember which card is under the finger and only confirm the tap in
+        // the touchend handler further down, once we know it wasn't a drag.
+        // Mouse clicks (desktop/laptop) aren't affected by this and still select
+        // instantly, since there's no drag-to-scroll gesture to conflict with.
+        const isTouch = e.pointerType === 'touch';
+        window._teamTapCandidate = null;
         if (window._teamSelectBtns) {
             const scrollOffset = window._teamScrollOffset || 0;
             for (let btn of window._teamSelectBtns) {
                 const visibleY = btn.y - scrollOffset;
                 if (pos.x >= btn.x && pos.x <= btn.x + btn.w &&
                     pos.y >= visibleY && pos.y <= visibleY + btn.h) {
-                    selectTeamById(btn.teamId);
-                    SoundManager.playSFX('menuClick', 0.3);
-                    return; // ✅ Prevents ghost-click
+                    if (isTouch) {
+                        window._teamTapCandidate = btn.teamId;
+                    } else {
+                        selectTeamById(btn.teamId);
+                        SoundManager.playSFX('menuClick', 0.3);
+                        return; // ✅ Prevents ghost-click
+                    }
                 }
             }
         }
@@ -652,3 +665,72 @@ canvas.addEventListener('wheel', (e) => {
         if (window._groupScrollOffset < 0) window._groupScrollOffset = 0;
     }
 }, { passive: false });
+// ===============================
+// MOBILE TEAM SELECT SCROLL FIX
+// ===============================
+
+let teamScrollTouch = {
+    active: false,
+    startY: 0,
+    startOffset: 0,
+    moved: false
+};
+// How far (in canvas pixels) a touch has to travel before we treat it as a
+// scroll drag instead of a tap on a card.
+const TEAM_SCROLL_DRAG_THRESHOLD = 8;
+
+canvas.addEventListener('touchstart', (e) => {
+    if (currentState !== 'TOURNAMENT_TEAM_SELECT') return;
+
+    // Use the same canvas-space scaling as every other input handler
+    // (getCanvasTouchPos) so a finger-drag of N px on screen always scrolls
+    // the same visual distance regardless of the canvas's on-screen size.
+    const pos = getCanvasTouchPos(e);
+    teamScrollTouch.active = true;
+    teamScrollTouch.moved = false;
+    teamScrollTouch.startY = pos.y;
+    teamScrollTouch.startOffset = window._teamScrollOffset || 0;
+}, { passive: true });
+
+canvas.addEventListener('touchmove', (e) => {
+    if (currentState !== 'TOURNAMENT_TEAM_SELECT') return;
+    if (!teamScrollTouch.active) return;
+
+    e.preventDefault();
+
+    const pos = getCanvasTouchPos(e);
+    const dy = pos.y - teamScrollTouch.startY;
+
+    if (Math.abs(dy) > TEAM_SCROLL_DRAG_THRESHOLD) {
+        teamScrollTouch.moved = true;
+        // Once we know this is a scroll, it's not a tap on a card anymore.
+        window._teamTapCandidate = null;
+    }
+
+    const totalRows = Math.ceil(TOURNAMENT_TEAMS.length / 5);
+    const totalHeight = totalRows * 66 + 80;
+    const maxScroll = Math.max(0, totalHeight - 420);
+
+    window._teamScrollOffset = teamScrollTouch.startOffset - dy;
+
+    if (window._teamScrollOffset < 0)
+        window._teamScrollOffset = 0;
+
+    if (window._teamScrollOffset > maxScroll)
+        window._teamScrollOffset = maxScroll;
+
+}, { passive: false });
+
+canvas.addEventListener('touchend', () => {
+    if (currentState === 'TOURNAMENT_TEAM_SELECT' && teamScrollTouch.active && !teamScrollTouch.moved) {
+        // The finger didn't move enough to count as a scroll, so treat this as
+        // a tap and select whatever card was under it (recorded on pointerdown).
+        if (window._teamTapCandidate !== null && typeof window._teamTapCandidate !== 'undefined') {
+            selectTeamById(window._teamTapCandidate);
+            SoundManager.playSFX('menuClick', 0.3);
+        }
+    }
+    teamScrollTouch.active = false;
+    teamScrollTouch.moved = false;
+    window._teamTapCandidate = null;
+});
