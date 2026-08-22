@@ -156,11 +156,20 @@
             }
 
             const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
-            // iOS Safari does not support the Fullscreen API for arbitrary elements —
-            // hide the button there rather than show one that silently does nothing.
-            if (isMobile && fsSupported() && fsBtn) {
-                fsBtn.style.display = 'flex';
+            const canShowButton = isMobile && fsSupported();
+
+            // The in-canvas pause button lives top-right during PLAY/PAUSED, so keep
+            // the fullscreen button off-screen during those states to avoid overlapping
+            // it. Fullscreen persists once toggled, so players just enable it from a
+            // menu screen before kicking off — no need to reach it again mid-match.
+            function syncButtonVisibility() {
+                if (!fsBtn || !canShowButton) return;
+                const hideDuringMatch = (typeof currentState !== 'undefined') &&
+                    (currentState === 'PLAY' || currentState === 'PAUSED');
+                fsBtn.style.display = hideDuringMatch ? 'none' : 'flex';
             }
+            if (canShowButton) setInterval(syncButtonVisibility, 200);
+            syncButtonVisibility();
 
             function updateIcon() {
                 const active = !!fsElement();
