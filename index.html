@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>⚽ Pro Striker – Ultimate Football</title>
+    <link rel="stylesheet" href="style.css" />
+    <style>
+        #loadingScreen {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: radial-gradient(circle, #0f1720, #06070a);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            font-family: 'Outfit', sans-serif;
+            transition: opacity 0.8s ease;
+        }
+        #loadingScreen.hidden { opacity: 0; pointer-events: none; }
+        .loader { width: 60px; height: 60px; border: 4px solid rgba(255,255,255,0.1); border-top: 4px solid #f1c40f; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #loadingScreen h1 { color: white; font-size: 32px; margin-top: 30px; background: linear-gradient(135deg, #f1c40f, #e74c3c); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        #loadingScreen p { color: rgba(255,255,255,0.5); margin-top: 10px; font-size: 14px; }
+        .progress-bar { width: 200px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-top: 20px; overflow: hidden; }
+        .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #f1c40f, #e74c3c); border-radius: 2px; transition: width 0.3s ease; }
+        
+        #gameWrapper {
+            /* Kept in sync with .game-wrapper in style.css — see the
+               detailed comment there. Fills the viewport at a locked 3:2
+               ratio instead of capping out at a fixed 900x600. */
+            position: relative;
+            width: min(100vw, calc(100vh * 3 / 2));
+            height: min(100vh, calc(100vw * 2 / 3));
+            aspect-ratio: 3/2;
+            overflow: hidden;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.06);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.85), inset 0 0 60px rgba(255,255,255,0.02);
+            background: linear-gradient(180deg, #11121b 0%, #101226 60%);
+            flex-shrink: 0;
+            touch-action: none;
+        }
+        
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background: #0b0f19;
+            image-rendering: auto;
+            touch-action: none;
+        }
+    </style>
+</head>
+<body>
+    <button id="fullscreenBtn" class="fullscreen-btn" aria-label="Toggle fullscreen" style="display:none;">
+        <svg id="fsIconExpand" viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M4 4h6v2H6v4H4V4zm14 0h-6v2h4v4h2V4zM4 20h6v-2H6v-4H4v6zm14 0h-6v-2h4v-4h2v6z"/></svg>
+        <svg id="fsIconCompress" viewBox="0 0 24 24" width="20" height="20" style="display:none;"><path fill="currentColor" d="M8 4H6v4H4v2h6V4h-2v0zm10 0h-2v6h6V8h-4V4zM4 14v2h4v4h2v-6H4zm14 0h-6v6h2v-4h4v-2z"/></svg>
+    </button>
+    <div id="gameWrapper" class="game-wrapper">
+        <div id="loadingScreen">
+            <div class="loader"></div>
+            <h1>⚽ PRO STRIKER</h1>
+            <p>Loading the beautiful game...</p>
+            <div class="progress-bar"><div class="progress-fill" id="loadProgress"></div></div>
+        </div>
+        <canvas id="gameCanvas" width="900" height="600"></canvas>
+        <div id="goalFlash" class="goal-flash"></div>
+        <div id="celebrationOverlay" class="celebration-overlay"></div>
+        <div id="touchControls" class="touch-controls mode-1v1">
+            <div id="p1Joystick" class="joystick-base p1-joy"><div class="joystick-stick"></div></div>
+            <button id="p1Shoot" class="shoot-btn p1-shoot" aria-label="Shoot P1">⚽</button>
+            <div id="p2Joystick" class="joystick-base p2-joy"><div class="joystick-stick"></div></div>
+            <button id="p2Shoot" class="shoot-btn p2-shoot" aria-label="Shoot P2">⚽</button>
+        </div>
+        <div id="rotateWarning" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.92); z-index:200; justify-content:center; align-items:center; flex-direction:column; color:white; text-align:center; padding:20px; font-family:'Outfit',sans-serif;">
+            <div style="font-size:48px; margin-bottom:20px;">📱</div>
+            <h2 style="margin-bottom:10px;">Please Rotate Your Device</h2>
+            <p style="opacity:0.7; max-width:300px;">Pro Striker works best in landscape mode. Rotate your phone for the best experience.</p>
+        </div>
+    </div>
+
+    <script src="js/globals.js"></script>
+    <script src="js/sound.js"></script>
+    <script src="js/ai.js"></script>
+    <script src="js/physics.js"></script>
+    <script src="js/renderer.js"></script>
+    <script src="js/tournamentData.js"></script>
+    <script src="js/tournament.js"></script>
+    <script src="js/input.js"></script>
+    <script src="js/main.js"></script>
+
+    <script>
+        let progress = 0;
+        const loadInterval = setInterval(() => {
+            progress += Math.random() * 15;
+            if (progress > 100) progress = 100;
+            document.getElementById('loadProgress').style.width = progress + '%';
+            if (progress >= 100) {
+                clearInterval(loadInterval);
+                setTimeout(() => document.getElementById('loadingScreen').classList.add('hidden'), 500);
+            }
+        }, 100);
+
+        window.addEventListener('load', () => {
+            const tryStart = () => {
+                if (typeof window.bootstrap === 'function') window.bootstrap();
+                else setTimeout(tryStart, 50);
+            };
+            tryStart();
+        });
+
+        function checkOrientation() {
+            const warning = document.getElementById('rotateWarning');
+            if (!warning) return;
+            const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
+            const isPortrait = window.innerHeight > window.innerWidth;
+            if (isMobile && isPortrait) {
+                warning.style.display = 'flex';
+            } else {
+                warning.style.display = 'none';
+            }
+        }
+        window.addEventListener('resize', checkOrientation);
+        window.addEventListener('orientationchange', checkOrientation);
+        checkOrientation();
+
+        // ===== FULLSCREEN TOGGLE =====
+        (function() {
+            const fsBtn = document.getElementById('fullscreenBtn');
+            const iconExpand = document.getElementById('fsIconExpand');
+            const iconCompress = document.getElementById('fsIconCompress');
+            const fsTarget = document.documentElement;
+
+            function fsRequest(el) {
+                const fn = el.requestFullscreen || el.webkitRequestFullscreen ||
+                           el.mozRequestFullScreen || el.msRequestFullscreen;
+                return fn ? fn.call(el) : Promise.reject('Fullscreen not supported');
+            }
+            function fsExit() {
+                const fn = document.exitFullscreen || document.webkitExitFullscreen ||
+                           document.mozCancelFullScreen || document.msExitFullscreen;
+                return fn ? fn.call(document) : Promise.reject('Fullscreen not supported');
+            }
+            function fsElement() {
+                return document.fullscreenElement || document.webkitFullscreenElement ||
+                       document.mozFullScreenElement || document.msFullscreenElement || null;
+            }
+            function fsSupported() {
+                return !!(document.fullscreenEnabled || document.webkitFullscreenEnabled ||
+                          document.mozFullScreenEnabled || document.msFullscreenEnabled);
+            }
+
+            const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
+            // BUGFIX: this used to be `isMobile && fsSupported()`, so laptop/desktop
+            // players never saw the fullscreen button at all — only phones did.
+            // Now any device that supports the Fullscreen API gets the button.
+            const canShowButton = fsSupported();
+
+            // The in-canvas pause button lives top-right during PLAY/PAUSED, so keep
+            // the fullscreen button off-screen during those states to avoid overlapping
+            // it. Fullscreen persists once toggled, so players just enable it from a
+            // menu screen before kicking off — no need to reach it again mid-match.
+            function syncButtonVisibility() {
+                if (!fsBtn || !canShowButton) return;
+                const hideDuringMatch = (typeof currentState !== 'undefined') &&
+                    (currentState === 'PLAY' || currentState === 'PAUSED');
+                fsBtn.style.display = hideDuringMatch ? 'none' : 'flex';
+            }
+            if (canShowButton) setInterval(syncButtonVisibility, 200);
+            syncButtonVisibility();
+
+            function updateIcon() {
+                const active = !!fsElement();
+                if (iconExpand) iconExpand.style.display = active ? 'none' : 'block';
+                if (iconCompress) iconCompress.style.display = active ? 'block' : 'none';
+            }
+
+            if (fsBtn) {
+                fsBtn.addEventListener('click', () => {
+                    if (fsElement()) {
+                        fsExit().catch(() => {});
+                        if (window.screen && screen.orientation && screen.orientation.unlock) {
+                            try { screen.orientation.unlock(); } catch (e) {}
+                        }
+                    } else {
+                        fsRequest(fsTarget).then(() => {
+                            // Landscape lock is a mobile-only concept (and the API
+                            // rejects/no-ops on desktop anyway) — only attempt it
+                            // on actual mobile devices so desktop fullscreen doesn't
+                            // fire a pointless orientation-lock request.
+                            if (isMobile && window.screen && screen.orientation && screen.orientation.lock) {
+                                screen.orientation.lock('landscape').catch(() => {});
+                            }
+                        }).catch(() => {});
+                    }
+                });
+            }
+
+            ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange']
+                .forEach(evt => document.addEventListener(evt, () => {
+                    updateIcon();
+                    checkOrientation();
+                }));
+        })();
+    </script>
+</body>
+</html>

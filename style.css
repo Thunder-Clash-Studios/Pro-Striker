@@ -1,0 +1,226 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap');
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; }
+
+html, body {
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+}
+
+body {
+    background: radial-gradient(circle at center, #0f1720 0%, #06070a 100%);
+    display: flex; justify-content: center; align-items: center;
+    min-height: 100vh; font-family: 'Outfit', sans-serif; color: #fff;
+    touch-action: none;
+}
+
+.game-wrapper {
+    /* BUGFIX: this used to be capped at min(100vw,900px) x min(100vh,600px),
+       so on any screen bigger than 900x600 (i.e. almost every desktop/
+       laptop, and definitely fullscreen) the wrapper just stopped growing
+       and sat pinned at 900x600 in the middle of the screen — leaving big
+       black bars down the left and right (or top/bottom) exactly like the
+       screenshot. The game's internal drawing is done in a fixed 900x600
+       logical coordinate space (see GAME_W/GAME_H + setupHiDPICanvas in
+       globals.js), so we can't just stretch it — we still need to preserve
+       the 3:2 aspect ratio. Instead of capping both dimensions at fixed
+       pixel values, we size each dimension against the OTHER dimension of
+       the viewport: width is capped at "however wide the screen is at a
+       3:2 ratio for the available height" and vice versa. Whichever axis
+       is the tighter constraint wins, and the wrapper always grows to fill
+       it — no more fixed 900x600 ceiling. */
+    position: relative;
+    width: min(100vw, calc(100vh * 3 / 2));
+    height: min(100vh, calc(100vw * 2 / 3));
+    aspect-ratio: 3/2;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.06);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.85), inset 0 0 60px rgba(255,255,255,0.02);
+    background: linear-gradient(180deg, #11121b 0%, #101226 60%);
+    flex-shrink: 0;
+    touch-action: none;
+}
+
+canvas { display: block; width: 100%; height: 100%; background: #1a1a2e; image-rendering: auto; touch-action: none; }
+
+#loadingScreen {
+    position: absolute; top:0; left:0; width:100%; height:100%;
+    background: radial-gradient(circle, #0f1720, #06070a);
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    z-index: 100; font-family: 'Outfit', sans-serif;
+    transition: opacity 0.8s ease;
+}
+#loadingScreen.hidden { opacity:0; pointer-events:none; }
+.loader { width:60px; height:60px; border:4px solid rgba(255,255,255,0.1); border-top:4px solid #f1c40f; border-radius:50%; animation: spin 1s linear infinite; }
+@keyframes spin { 0% { transform:rotate(0deg); } 100% { transform:rotate(360deg); } }
+#loadingScreen h1 { color:#fff; font-size:32px; margin-top:30px; background:linear-gradient(135deg,#f1c40f,#e74c3c); background-clip:text; -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+#loadingScreen p { color:rgba(255,255,255,0.5); margin-top:10px; font-size:14px; }
+.progress-bar { width:200px; height:4px; background:rgba(255,255,255,0.1); border-radius:2px; margin-top:20px; overflow:hidden; }
+.progress-fill { height:100%; width:0%; background:linear-gradient(90deg,#f1c40f,#e74c3c); border-radius:2px; transition:width 0.3s ease; }
+
+.goal-flash {
+    position: absolute; top:0; left:0; width:100%; height:100%;
+    pointer-events: none;
+    background: radial-gradient(ellipse at center, rgba(255,255,255,0.8) 0%, rgba(255,215,0,0.4) 50%, transparent 70%);
+    opacity:0; transition: opacity 0.05s ease; z-index:10;
+}
+.goal-flash.active { opacity:1; animation: flashPulse 0.6s ease-out forwards; }
+@keyframes flashPulse {
+    0% { opacity:1; transform:scale(0.8); }
+    50% { opacity:0.8; transform:scale(1.05); }
+    100% { opacity:0; transform:scale(1); }
+}
+.game-wrapper.shake-impact {
+    animation: violentShake 0.45s cubic-bezier(.36,.07,.19,.97) both;
+}
+@keyframes violentShake {
+    0% { transform: translate(0, 0) rotate(0deg); }
+    10% { transform: translate(-14px, 10px) rotate(-1.5deg); }
+    20% { transform: translate(16px, -12px) rotate(2deg); }
+    30% { transform: translate(-12px, -14px) rotate(-1deg); }
+    40% { transform: translate(14px, 12px) rotate(1.5deg); }
+    50% { transform: translate(-16px, 8px) rotate(-2deg); }
+    60% { transform: translate(10px, -10px) rotate(1deg); }
+    70% { transform: translate(-8px, 14px) rotate(-1.5deg); }
+    80% { transform: translate(12px, -8px) rotate(1deg); }
+    90% { transform: translate(-10px, 5px) rotate(-0.5deg); }
+    100% { transform: translate(0, 0) rotate(0deg); }
+}
+.celebration-overlay {
+    position: absolute; top:0; left:0; width:100%; height:100%;
+    pointer-events: none; z-index:9; opacity:0; transition: opacity 0.3s ease;
+}
+.celebration-overlay.active { opacity:1; }
+
+.touch-controls {
+    position: absolute; top:0; left:0; width:100%; height:100%;
+    pointer-events: none; display: none; z-index:20;
+}
+.touch-controls.is-active { display:block !important; }
+
+.joystick-base {
+    position: absolute;
+    width: clamp(60px, 10vw, 110px);
+    height: clamp(60px, 10vw, 110px);
+    background: rgba(255,255,255,0.08);
+    border: 2px solid rgba(255,255,255,0.25);
+    border-radius: 50%;
+    display: flex; justify-content: center; align-items: center;
+    pointer-events: auto; touch-action: none;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 0 30px rgba(0,0,0,0.5);
+    transition: all 0.3s ease;
+    opacity: 0.7;
+}
+.joystick-base:active { transform:scale(0.95); }
+.joystick-stick {
+    width:38%; height:38%;
+    background: rgba(255,255,255,0.6);
+    border-radius:50%;
+    box-shadow: 0 0 15px rgba(255,255,255,0.2);
+    pointer-events: none;
+    transition: transform 0.05s linear;
+}
+.mode-1v1 .p1-joy { border-color: rgba(255,80,80,0.7) !important; }
+.mode-1v1 .p2-joy { border-color: rgba(80,180,255,0.7) !important; }
+
+.shoot-btn {
+    position: absolute;
+    width: clamp(44px, 7vw, 75px);
+    height: clamp(44px, 7vw, 75px);
+    background: radial-gradient(circle, rgba(241,196,15,0.8) 0%, rgba(211,84,0,0.8) 100%);
+    border: 3px solid rgba(255,255,255,0.5);
+    border-radius:50%;
+    font-size: clamp(20px, 3.5vw, 36px);
+    display: flex; justify-content: center; align-items: center;
+    cursor: pointer; pointer-events: auto; touch-action: none;
+    box-shadow: 0 6px 24px rgba(241,196,15,0.14), 0 0 40px rgba(241,196,15,0.12);
+    outline: none; transition: all 0.1s ease;
+    opacity: 0.8;
+}
+.shoot-btn:active { transform: scale(0.85) !important; box-shadow: 0 0 80px currentColor !important; }
+.p1-shoot { background: radial-gradient(circle at 30% 30%, #ff6b6b, #c0392b) !important; border-color:#ff6b6b !important; box-shadow:0 0 40px rgba(255,50,50,0.25) !important; }
+.p2-shoot { background: radial-gradient(circle at 30% 30%, #6bc5ff, #2980b9) !important; border-color:#6bc5ff !important; box-shadow:0 0 40px rgba(50,150,255,0.25) !important; }
+
+.mode-1v1 .p1-joy   { bottom:20px; left:20px; }
+.mode-1v1 .p1-shoot { top:20px; left:20px; }
+.mode-1v1 .p2-joy   { top:20px; right:20px; }
+.mode-1v1 .p2-shoot { bottom:20px; right:20px; }
+
+.mode-pve .p1-joy   { bottom:20px; left:20px; }
+.mode-pve .p1-shoot { bottom:20px; right:20px; }
+.mode-pve .p2-joy, .mode-pve .p2-shoot { display:none !important; }
+
+/* Push controls clear of notches / home-indicator bars when fullscreen on mobile.
+   Applied as padding on the shared parent so it works at every breakpoint below,
+   instead of needing to be duplicated on each button/joystick rule. */
+.touch-controls {
+    padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+             env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+
+.fullscreen-btn {
+    position: absolute;
+    top: calc(12px + env(safe-area-inset-top, 0px));
+    right: calc(12px + env(safe-area-inset-right, 0px));
+    width: 38px;
+    height: 38px;
+    background: rgba(15,20,25,0.7);
+    border: 1.5px solid rgba(255,255,255,0.25);
+    border-radius: 50%;
+    color: rgba(255,255,255,0.85);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 50;
+    cursor: pointer;
+    pointer-events: auto;
+    touch-action: manipulation;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    transition: transform 0.15s ease, background 0.15s ease;
+}
+.fullscreen-btn:active { transform: scale(0.88); background: rgba(15,20,25,0.9); }
+
+@media (max-width: 420px) {
+    .joystick-base {
+        width: 55px !important;
+        height: 55px !important;
+        opacity: 0.6;
+        border-width: 1.5px;
+    }
+    .joystick-stick {
+        width: 30%;
+        height: 30%;
+    }
+    .shoot-btn {
+        width: 40px !important;
+        height: 40px !important;
+        font-size: 18px !important;
+        border-width: 2px;
+        opacity: 0.7;
+    }
+    .mode-1v1 .p1-joy   { bottom:10px; left:10px; }
+    .mode-1v1 .p1-shoot { top:10px; left:10px; }
+    .mode-1v1 .p2-joy   { top:10px; right:10px; }
+    .mode-1v1 .p2-shoot { bottom:10px; right:10px; }
+    .mode-pve .p1-joy   { bottom:10px; left:10px; }
+    .mode-pve .p1-shoot { bottom:10px; right:10px; }
+}
+
+/* BUGFIX: this second .game-wrapper rule was declared later in the
+   cascade than the real one above, so — despite that rule being fixed to
+   fill the screen — this stale duplicate (still using the old 900x600 cap)
+   was the one actually winning and pinning the game back down to 900x600
+   with black bars on every screen bigger than that. Removed the
+   redeclared sizing here entirely so the single source of truth above is
+   the only one in effect; the media query below (unrelated to sizing) is
+   kept as-is. */
+@media (max-width: 600px) {
+    .joystick-base { width: 55px !important; height: 55px !important; }
+    .shoot-btn { width: 40px !important; height: 40px !important; font-size: 18px !important; }
+}
