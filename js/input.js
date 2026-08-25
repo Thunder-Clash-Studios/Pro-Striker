@@ -546,13 +546,32 @@ function selectMode(mode) {
     SoundManager.updateMusicForState(currentState);
 }
 
-function updateTouchUI() {
-    if (currentState === 'PLAY' && isMobileDevice) {
+// Cheap, side-effect-free DOM sync — safe to call every frame. Split out from
+// updateTouchUI() below so the per-frame safety net (see gameLoop in main.js)
+// doesn't also re-run SoundManager.updateMusicForState() 60x/sec.
+function syncTouchControlsVisibility() {
+    const inMatch = (currentState === 'PLAY' || currentState === 'PAUSED' || currentState === 'GOAL_SCORED');
+    if (inMatch && isMobileDevice) {
         touchControlsElem.style.display = 'block';
         touchControlsElem.className = 'touch-controls is-active mode-' + gameMode;
     } else {
         touchControlsElem.style.display = 'none';
     }
+}
+
+function updateTouchUI() {
+    // BUGFIX: this used to only check `currentState === 'PLAY'`, so any state
+    // transition to MENU/MATCH_END/etc. that forgot to call updateTouchUI()
+    // right after (there were several — e.g. tapping "Continue" out of a
+    // vs-Computer MATCH_END screen) left the joysticks/shoot buttons stuck on
+    // screen from the last match. As a second layer of defense, gameLoop
+    // (main.js) now also calls syncTouchControlsVisibility() every frame, so
+    // even a future call site that forgets this function can't leave the
+    // controls stuck for more than one frame. GOAL_SCORED and PAUSED are also
+    // genuinely still "in a match" — the controls should stay visible (though
+    // not needed) through a goal celebration or while paused, same as the
+    // in-canvas pause button does.
+    syncTouchControlsVisibility();
     SoundManager.updateMusicForState(currentState);
 }
 
