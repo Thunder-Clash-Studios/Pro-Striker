@@ -881,6 +881,13 @@ function gameLoop(timestamp) {
     lastTime = timestamp;
     update(dt);
     draw();
+    // Cheap per-frame safety net: guarantees the joystick/shoot controls can
+    // never stay stuck on screen for more than one frame after leaving a
+    // match, even if some future code path forgets to call updateTouchUI()
+    // after changing currentState (see updateTouchUI in input.js for the
+    // full explanation — this was exactly the "buttons stuck after a vs-
+    // Computer match" bug).
+    if (typeof syncTouchControlsVisibility === 'function') syncTouchControlsVisibility();
     requestAnimationFrame(gameLoop);
 }
 
