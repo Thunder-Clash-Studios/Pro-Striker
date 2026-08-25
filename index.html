@@ -7,6 +7,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>⚽ Pro Striker – Ultimate Football</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <link rel="stylesheet" href="style.css" />
     <style>
         #loadingScreen {
@@ -62,6 +63,27 @@
         <svg id="fsIconExpand" viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M4 4h6v2H6v4H4V4zm14 0h-6v2h4v4h2V4zM4 20h6v-2H6v-4H4v6zm14 0h-6v-2h4v-4h2v6z"/></svg>
         <svg id="fsIconCompress" viewBox="0 0 24 24" width="20" height="20" style="display:none;"><path fill="currentColor" d="M8 4H6v4H4v2h6V4h-2v0zm10 0h-2v6h6V8h-4V4zM4 14v2h4v4h2v-6H4zm14 0h-6v6h2v-4h4v-2z"/></svg>
     </button>
+    <!-- Deliberately a sibling of #gameWrapper, not a child of it. The game
+         canvas is locked to a 3:2 box (see .game-wrapper in style.css) and on
+         most phone aspect ratios that box doesn't reach every screen edge —
+         if the joystick/shoot buttons were positioned relative to that box
+         (like they used to be), they'd sit inset from the real screen edges
+         by however much letterbox margin existed, forcing thumbs to reach
+         inward instead of resting naturally at the edges of the phone. As a
+         direct child of <body> with position:fixed (see .touch-controls in
+         style.css), they anchor to the actual viewport instead, so they're
+         always right at the true screen edges regardless of the letterbox. -->
+    <div id="touchControls" class="touch-controls mode-1v1">
+        <div id="p1Joystick" class="joystick-base p1-joy"><div class="joystick-stick"></div></div>
+        <button id="p1Shoot" class="shoot-btn p1-shoot" aria-label="Shoot P1">⚽</button>
+        <div id="p2Joystick" class="joystick-base p2-joy"><div class="joystick-stick"></div></div>
+        <button id="p2Shoot" class="shoot-btn p2-shoot" aria-label="Shoot P2">⚽</button>
+    </div>
+    <div id="rotateWarning" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.92); z-index:200; justify-content:center; align-items:center; flex-direction:column; color:white; text-align:center; padding:20px; font-family:'Outfit',sans-serif;">
+        <div style="font-size:48px; margin-bottom:20px;">📱</div>
+        <h2 style="margin-bottom:10px;">Please Rotate Your Device</h2>
+        <p style="opacity:0.7; max-width:300px;">Pro Striker works best in landscape mode. Rotate your phone for the best experience.</p>
+    </div>
     <div id="gameWrapper" class="game-wrapper">
         <div id="loadingScreen">
             <div class="loader"></div>
@@ -72,17 +94,6 @@
         <canvas id="gameCanvas" width="900" height="600"></canvas>
         <div id="goalFlash" class="goal-flash"></div>
         <div id="celebrationOverlay" class="celebration-overlay"></div>
-        <div id="touchControls" class="touch-controls mode-1v1">
-            <div id="p1Joystick" class="joystick-base p1-joy"><div class="joystick-stick"></div></div>
-            <button id="p1Shoot" class="shoot-btn p1-shoot" aria-label="Shoot P1">⚽</button>
-            <div id="p2Joystick" class="joystick-base p2-joy"><div class="joystick-stick"></div></div>
-            <button id="p2Shoot" class="shoot-btn p2-shoot" aria-label="Shoot P2">⚽</button>
-        </div>
-        <div id="rotateWarning" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.92); z-index:200; justify-content:center; align-items:center; flex-direction:column; color:white; text-align:center; padding:20px; font-family:'Outfit',sans-serif;">
-            <div style="font-size:48px; margin-bottom:20px;">📱</div>
-            <h2 style="margin-bottom:10px;">Please Rotate Your Device</h2>
-            <p style="opacity:0.7; max-width:300px;">Pro Striker works best in landscape mode. Rotate your phone for the best experience.</p>
-        </div>
     </div>
 
     <script src="js/globals.js"></script>
