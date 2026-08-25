@@ -460,10 +460,12 @@ function drawMatchBall(b) {
 // ============================================================
 function drawGoalNet(side) {
     // side: 'left' or 'right'. Net sits just outside the pitch boundary,
-    // spanning the goal mouth (y 150–450 outer box → visually 170–430).
+    // spanning the goal mouth between the actual posts (posts sit at
+    // y=200/y=400 with radius 7 — the net now matches that span exactly
+    // instead of overshooting past the post tops/bottoms).
     const x0 = side === 'left' ? 2 : 875;
     const x1 = side === 'left' ? 25 : 898;
-    const yTop = 165, yBot = 435;
+    const yTop = 200, yBot = 400;
     ctx.save();
     ctx.strokeStyle = 'rgba(255,255,255,0.22)';
     ctx.lineWidth = 1;
