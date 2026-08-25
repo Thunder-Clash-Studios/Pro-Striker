@@ -97,15 +97,21 @@ canvas { display: block; width: 100%; height: 100%; background: #1a1a2e; image-r
 .celebration-overlay.active { opacity:1; }
 
 .touch-controls {
-    position: absolute; top:0; left:0; width:100%; height:100%;
+    /* Fixed to the real viewport (not absolute-within-gameWrapper) — see the
+       comment on this element in index.html for why: it needs to reach the
+       true screen edges even when the 3:2 game box is letterboxed. */
+    position: fixed; top:0; left:0; width:100vw; height:100vh;
     pointer-events: none; display: none; z-index:20;
 }
 .touch-controls.is-active { display:block !important; }
 
 .joystick-base {
     position: absolute;
-    width: clamp(60px, 10vw, 110px);
-    height: clamp(60px, 10vw, 110px);
+    /* BUGFIX: bumped up from clamp(60px,10vw,110px) — on phone this measured
+       out a little small/cramped right in the corner for a thumb to rest on
+       comfortably. ~15% bigger across the board, same responsive clamp shape. */
+    width: clamp(70px, 12vw, 125px);
+    height: clamp(70px, 12vw, 125px);
     background: rgba(255,255,255,0.08);
     border: 2px solid rgba(255,255,255,0.25);
     border-radius: 50%;
@@ -130,12 +136,13 @@ canvas { display: block; width: 100%; height: 100%; background: #1a1a2e; image-r
 
 .shoot-btn {
     position: absolute;
-    width: clamp(44px, 7vw, 75px);
-    height: clamp(44px, 7vw, 75px);
+    /* BUGFIX: bumped up to match the joystick — was clamp(44px,7vw,75px). */
+    width: clamp(52px, 8.5vw, 88px);
+    height: clamp(52px, 8.5vw, 88px);
     background: radial-gradient(circle, rgba(241,196,15,0.8) 0%, rgba(211,84,0,0.8) 100%);
     border: 3px solid rgba(255,255,255,0.5);
     border-radius:50%;
-    font-size: clamp(20px, 3.5vw, 36px);
+    font-size: clamp(22px, 4vw, 40px);
     display: flex; justify-content: center; align-items: center;
     cursor: pointer; pointer-events: auto; touch-action: none;
     box-shadow: 0 6px 24px rgba(241,196,15,0.14), 0 0 40px rgba(241,196,15,0.12);
@@ -146,13 +153,17 @@ canvas { display: block; width: 100%; height: 100%; background: #1a1a2e; image-r
 .p1-shoot { background: radial-gradient(circle at 30% 30%, #ff6b6b, #c0392b) !important; border-color:#ff6b6b !important; box-shadow:0 0 40px rgba(255,50,50,0.25) !important; }
 .p2-shoot { background: radial-gradient(circle at 30% 30%, #6bc5ff, #2980b9) !important; border-color:#6bc5ff !important; box-shadow:0 0 40px rgba(50,150,255,0.25) !important; }
 
-.mode-1v1 .p1-joy   { bottom:20px; left:20px; }
-.mode-1v1 .p1-shoot { top:20px; left:20px; }
-.mode-1v1 .p2-joy   { top:20px; right:20px; }
-.mode-1v1 .p2-shoot { bottom:20px; right:20px; }
+/* BUGFIX: nudged in from 20px to 16px now that the controls are bigger —
+   keeps them from feeling like they're jammed into the exact pixel corner,
+   while the bigger touch target still stays fully on-screen with room to
+   spare against the safe-area padding on .touch-controls below. */
+.mode-1v1 .p1-joy   { bottom:16px; left:16px; }
+.mode-1v1 .p1-shoot { top:16px; left:16px; }
+.mode-1v1 .p2-joy   { top:16px; right:16px; }
+.mode-1v1 .p2-shoot { bottom:16px; right:16px; }
 
-.mode-pve .p1-joy   { bottom:20px; left:20px; }
-.mode-pve .p1-shoot { bottom:20px; right:20px; }
+.mode-pve .p1-joy   { bottom:16px; left:16px; }
+.mode-pve .p1-shoot { bottom:16px; right:16px; }
 .mode-pve .p2-joy, .mode-pve .p2-shoot { display:none !important; }
 
 /* Push controls clear of notches / home-indicator bars when fullscreen on mobile.
@@ -187,9 +198,14 @@ canvas { display: block; width: 100%; height: 100%; background: #1a1a2e; image-r
 .fullscreen-btn:active { transform: scale(0.88); background: rgba(15,20,25,0.9); }
 
 @media (max-width: 420px) {
+    /* BUGFIX: these !important overrides were still using the OLD sizes
+       (55px/40px), which on real phones (almost all under 420px wide) was
+       actually the size winning over the bigger clamp() values above —
+       bumping the base .joystick-base/.shoot-btn rules alone wouldn't have
+       been felt on an actual phone at all. Bumped ~15% to match. */
     .joystick-base {
-        width: 55px !important;
-        height: 55px !important;
+        width: 64px !important;
+        height: 64px !important;
         opacity: 0.6;
         border-width: 1.5px;
     }
@@ -198,18 +214,18 @@ canvas { display: block; width: 100%; height: 100%; background: #1a1a2e; image-r
         height: 30%;
     }
     .shoot-btn {
-        width: 40px !important;
-        height: 40px !important;
-        font-size: 18px !important;
+        width: 48px !important;
+        height: 48px !important;
+        font-size: 21px !important;
         border-width: 2px;
         opacity: 0.7;
     }
-    .mode-1v1 .p1-joy   { bottom:10px; left:10px; }
-    .mode-1v1 .p1-shoot { top:10px; left:10px; }
-    .mode-1v1 .p2-joy   { top:10px; right:10px; }
-    .mode-1v1 .p2-shoot { bottom:10px; right:10px; }
-    .mode-pve .p1-joy   { bottom:10px; left:10px; }
-    .mode-pve .p1-shoot { bottom:10px; right:10px; }
+    .mode-1v1 .p1-joy   { bottom:12px; left:12px; }
+    .mode-1v1 .p1-shoot { top:12px; left:12px; }
+    .mode-1v1 .p2-joy   { top:12px; right:12px; }
+    .mode-1v1 .p2-shoot { bottom:12px; right:12px; }
+    .mode-pve .p1-joy   { bottom:12px; left:12px; }
+    .mode-pve .p1-shoot { bottom:12px; right:12px; }
 }
 
 /* BUGFIX: this second .game-wrapper rule was declared later in the
@@ -221,6 +237,9 @@ canvas { display: block; width: 100%; height: 100%; background: #1a1a2e; image-r
    the only one in effect; the media query below (unrelated to sizing) is
    kept as-is. */
 @media (max-width: 600px) {
-    .joystick-base { width: 55px !important; height: 55px !important; }
-    .shoot-btn { width: 40px !important; height: 40px !important; font-size: 18px !important; }
+    /* BUGFIX: kept in sync with the 420px breakpoint above — was still
+       55px/40px here too, silently undoing the bigger sizing on any phone
+       between 421-600px wide. */
+    .joystick-base { width: 64px !important; height: 64px !important; }
+    .shoot-btn { width: 48px !important; height: 48px !important; font-size: 21px !important; }
 }
