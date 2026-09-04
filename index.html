@@ -34,10 +34,14 @@
         #gameWrapper {
             /* Kept in sync with .game-wrapper in style.css — see the
                detailed comment there. Fills the viewport at a locked 3:2
-               ratio instead of capping out at a fixed 900x600. */
+               ratio instead of capping out at a fixed 900x600, and uses
+               100dvh (with 100vh fallback) so iPhone Safari's always-visible
+               address bar doesn't clip the bottom of the game off-screen. */
             position: relative;
             width: min(100vw, calc(100vh * 3 / 2));
+            width: min(100vw, calc(100dvh * 3 / 2));
             height: min(100vh, calc(100vw * 2 / 3));
+            height: min(100dvh, calc(100vw * 2 / 3));
             aspect-ratio: 3/2;
             overflow: hidden;
             border-radius: 16px;
@@ -59,10 +63,13 @@
     </style>
 </head>
 <body>
-    <button id="fullscreenBtn" class="fullscreen-btn" aria-label="Toggle fullscreen" style="display:none;">
-        <svg id="fsIconExpand" viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M4 4h6v2H6v4H4V4zm14 0h-6v2h4v4h2V4zM4 20h6v-2H6v-4H4v6zm14 0h-6v-2h4v-4h2v6z"/></svg>
-        <svg id="fsIconCompress" viewBox="0 0 24 24" width="20" height="20" style="display:none;"><path fill="currentColor" d="M8 4H6v4H4v2h6V4h-2v0zm10 0h-2v6h6V8h-4V4zM4 14v2h4v4h2v-6H4zm14 0h-6v6h2v-4h4v-2z"/></svg>
-    </button>
+    <!-- CRAZYGAMES BUILD: no custom fullscreen button. CrazyGames auto-
+         provides fullscreen and explicitly prohibits custom in-game
+         fullscreen buttons/controls ("can interfere with other features
+         e.g. monetization" — see requirements doc). Poki's build keeps the
+         button; this build (see index.html for CrazyGames) omits it
+         entirely rather than just hiding it, so there's no dead code or
+         confusing unused markup left behind. -->
     <!-- Deliberately a sibling of #gameWrapper, not a child of it. The game
          canvas is locked to a 3:2 box (see .game-wrapper in style.css) and on
          most phone aspect ratios that box doesn't reach every screen edge —
@@ -79,7 +86,7 @@
         <div id="p2Joystick" class="joystick-base p2-joy"><div class="joystick-stick"></div></div>
         <button id="p2Shoot" class="shoot-btn p2-shoot" aria-label="Shoot P2">⚽</button>
     </div>
-    <div id="rotateWarning" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.92); z-index:200; justify-content:center; align-items:center; flex-direction:column; color:white; text-align:center; padding:20px; font-family:'Outfit',sans-serif;">
+    <div id="rotateWarning" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; height:100dvh; background:rgba(0,0,0,0.92); z-index:200; justify-content:center; align-items:center; flex-direction:column; color:white; text-align:center; padding:20px; font-family:'Outfit',sans-serif;">
         <div style="font-size:48px; margin-bottom:20px;">📱</div>
         <h2 style="margin-bottom:10px;">Please Rotate Your Device</h2>
         <p style="opacity:0.7; max-width:300px;">Pro Striker works best in landscape mode. Rotate your phone for the best experience.</p>
@@ -107,6 +114,30 @@
     <script src="js/main.js"></script>
 
     <script>
+        // ===== SITELOCK (CrazyGames build only) =====
+        // Prevents this build from running if the page it's loaded on isn't
+        // an actual CrazyGames domain — stops someone from ripping the game
+        // files and rehosting them elsewhere as-is. Per CrazyGames' own
+        // Sitelock doc: https://docs.crazygames.com/resources/html5/sitelock/
+        // IMPORTANT: this check is specific to THIS CrazyGames build. If
+        // this same project is packaged for Poki, itch.io, or anywhere
+        // else, this block must be removed from that copy — it would
+        // otherwise block the game from ever loading there too.
+        function isCrazyGames() {
+            const hostname = window.location.hostname;
+            const parts = hostname.split(".");
+            const idx = parts.indexOf("crazygames");
+            return idx !== -1 && idx >= parts.length - 3;
+        }
+        // Also allow localhost/127.0.0.1 so local dev testing (like this
+        // file being opened directly, or via a local dev server) still
+        // works — only a real, non-CrazyGames public domain gets blocked.
+        function isLocalDev() {
+            const h = window.location.hostname;
+            return h === 'localhost' || h === '127.0.0.1' || h === '' || h === '[::1]';
+        }
+        const siteLockPassed = isCrazyGames() || isLocalDev();
+
         let progress = 0;
         const loadInterval = setInterval(() => {
             progress += Math.random() * 15;
@@ -119,6 +150,16 @@
         }, 100);
 
         window.addEventListener('load', () => {
+            if (!siteLockPassed) {
+                clearInterval(loadInterval);
+                const loadingScreen = document.getElementById('loadingScreen');
+                if (loadingScreen) {
+                    loadingScreen.innerHTML =
+                        '<h1>⚽ PRO STRIKER</h1><p>Available only on CrazyGames.</p>';
+                    loadingScreen.classList.remove('hidden');
+                }
+                return; // bootstrap() is never called — game never starts
+            }
             const tryStart = () => {
                 if (typeof window.bootstrap === 'function') window.bootstrap();
                 else setTimeout(tryStart, 50);
@@ -141,84 +182,10 @@
         window.addEventListener('orientationchange', checkOrientation);
         checkOrientation();
 
-        // ===== FULLSCREEN TOGGLE =====
-        (function() {
-            const fsBtn = document.getElementById('fullscreenBtn');
-            const iconExpand = document.getElementById('fsIconExpand');
-            const iconCompress = document.getElementById('fsIconCompress');
-            const fsTarget = document.documentElement;
-
-            function fsRequest(el) {
-                const fn = el.requestFullscreen || el.webkitRequestFullscreen ||
-                           el.mozRequestFullScreen || el.msRequestFullscreen;
-                return fn ? fn.call(el) : Promise.reject('Fullscreen not supported');
-            }
-            function fsExit() {
-                const fn = document.exitFullscreen || document.webkitExitFullscreen ||
-                           document.mozCancelFullScreen || document.msExitFullscreen;
-                return fn ? fn.call(document) : Promise.reject('Fullscreen not supported');
-            }
-            function fsElement() {
-                return document.fullscreenElement || document.webkitFullscreenElement ||
-                       document.mozFullScreenElement || document.msFullscreenElement || null;
-            }
-            function fsSupported() {
-                return !!(document.fullscreenEnabled || document.webkitFullscreenEnabled ||
-                          document.mozFullScreenEnabled || document.msFullscreenEnabled);
-            }
-
-            const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
-            // BUGFIX: this used to be `isMobile && fsSupported()`, so laptop/desktop
-            // players never saw the fullscreen button at all — only phones did.
-            // Now any device that supports the Fullscreen API gets the button.
-            const canShowButton = fsSupported();
-
-            // The in-canvas pause button lives top-right during PLAY/PAUSED, so keep
-            // the fullscreen button off-screen during those states to avoid overlapping
-            // it. Fullscreen persists once toggled, so players just enable it from a
-            // menu screen before kicking off — no need to reach it again mid-match.
-            function syncButtonVisibility() {
-                if (!fsBtn || !canShowButton) return;
-                const hideDuringMatch = (typeof currentState !== 'undefined') &&
-                    (currentState === 'PLAY' || currentState === 'PAUSED');
-                fsBtn.style.display = hideDuringMatch ? 'none' : 'flex';
-            }
-            if (canShowButton) setInterval(syncButtonVisibility, 200);
-            syncButtonVisibility();
-
-            function updateIcon() {
-                const active = !!fsElement();
-                if (iconExpand) iconExpand.style.display = active ? 'none' : 'block';
-                if (iconCompress) iconCompress.style.display = active ? 'block' : 'none';
-            }
-
-            if (fsBtn) {
-                fsBtn.addEventListener('click', () => {
-                    if (fsElement()) {
-                        fsExit().catch(() => {});
-                        if (window.screen && screen.orientation && screen.orientation.unlock) {
-                            try { screen.orientation.unlock(); } catch (e) {}
-                        }
-                    } else {
-                        fsRequest(fsTarget).then(() => {
-                            // Landscape lock is a mobile-only concept (and the API
-                            // rejects/no-ops on desktop anyway) — only attempt it
-                            // on actual mobile devices so desktop fullscreen doesn't
-                            // fire a pointless orientation-lock request.
-                            if (isMobile && window.screen && screen.orientation && screen.orientation.lock) {
-                                screen.orientation.lock('landscape').catch(() => {});
-                            }
-                        }).catch(() => {});
-                    }
-                });
-            }
-
-            ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange']
-                .forEach(evt => document.addEventListener(evt, () => {
-                    updateIcon();
-                    checkOrientation();
-                }));
-        })();
+        // NOTE (CrazyGames build): no custom fullscreen toggle here — see the
+        // comment on the removed button in the <body> above. CrazyGames
+        // handles fullscreen entirely on their end; this game doesn't need
+        // to request or manage it at all.
     </script>
 </body>
 </html>
