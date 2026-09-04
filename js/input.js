@@ -3,14 +3,7 @@ console.log('[ProStriker] input.js loaded');
 
 window.addEventListener('keydown', (e) => {
     initSoundOnInteraction();
-    // NOTE (CrazyGames requirement): Escape is deliberately excluded from
-    // this preventDefault list. CrazyGames reserves Escape to exit their
-    // own fullscreen mode — calling preventDefault() on it here would block
-    // that from working while the player is in fullscreen on their site.
-    // 'P' (and Backspace, handled per-state below) remain the primary way
-    // to pause/back-out; Escape still triggers the same game actions below,
-    // it's just no longer prevented from also reaching the browser/portal.
-    if ([' ', 'Enter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'p', 'P', 'Shift'].includes(e.key)) {
+    if ([' ', 'Enter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Escape', 'p', 'P', 'Shift'].includes(e.key)) {
         e.preventDefault();
     }
     const keyLower = e.key.toLowerCase();
@@ -23,9 +16,6 @@ window.addEventListener('keydown', (e) => {
         keys[keyLower] = true;
     }
     if (keys.hasOwnProperty(e.key)) keys[e.key] = true;
-    // 'P' is the primary pause key (works from any in-match state, no
-    // platform conflicts). Escape still pauses too, for players used to it
-    // — see the preventDefault note above for why it's no longer blocked.
     if (keyLower === 'p' && currentState === 'PLAY') togglePause();
     if (e.key === 'Escape' && currentState === 'PAUSED') togglePause();
     if (keyLower === 'm') { SoundManager.toggleSFX(); SoundManager.playSFX('menuClick', 0.3); updateTouchUI(); }
