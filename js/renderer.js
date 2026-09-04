@@ -1064,7 +1064,7 @@ function drawDifficultySelect() {
 
     ctx.textAlign = 'center';
     ctx.fillStyle = 'rgba(255,255,255,0.35)';
-    ctx.font = '700 11px Outfit, sans-serif';
+    ctx.font = '700 11px "Arial Narrow", sans-serif';
     ctx.fillText('VS COMPUTER', 450, 72);
     drawGlowTitle('SELECT DIFFICULTY', 450, 108, '#00e5ff', 36);
     ctx.fillStyle = 'rgba(255,255,255,0.45)';
@@ -1100,24 +1100,15 @@ function drawDifficultySelect() {
         const { x, y } = positions[idx];
 
         ctx.save();
-        // BUGFIX/BEAUTIFY: non-selected cards used to sit at 0.09 fill /
-        // 0.5 stroke opacity with zero glow at all — only the selected card
-        // had any shadowBlur, so next to it every other card looked flat
-        // and washed out (see screenshot: EASY/MEDIUM/HARD/WORLD CLASS all
-        // dim, only ELITE lit up). Every card now carries its own soft
-        // ambient glow in its own color, so the whole row reads as vivid —
-        // the selected card still stands out clearly since its glow/fill/
-        // border are all a further step brighter than the baseline here,
-        // not because it's the only one lit at all.
         ctx.shadowColor = lvl.color;
-        ctx.shadowBlur = isSelected ? 26 : 12;
-        ctx.fillStyle = hexToRgba(lvl.color, isSelected ? 0.28 : 0.16);
+        ctx.shadowBlur = isSelected ? 20 : 0;
+        ctx.fillStyle = hexToRgba(lvl.color, isSelected ? 0.22 : 0.09);
         ctx.beginPath();
         ctx.roundRect(x, y, cardW, cardH, 16);
         ctx.fill();
         ctx.shadowBlur = 0;
-        ctx.strokeStyle = hexToRgba(lvl.color, isSelected ? 0.95 : 0.75);
-        ctx.lineWidth = isSelected ? 2.5 : 1.8;
+        ctx.strokeStyle = hexToRgba(lvl.color, isSelected ? 0.95 : 0.5);
+        ctx.lineWidth = isSelected ? 2.5 : 1.5;
         ctx.beginPath();
         ctx.roundRect(x, y, cardW, cardH, 16);
         ctx.stroke();
@@ -1125,15 +1116,10 @@ function drawDifficultySelect() {
 
         const cx = x + cardW / 2;
 
-        // Icon — bigger and with its own colored glow so each one reads as
-        // a distinct little emblem instead of a small flat emoji.
-        ctx.save();
+        // Icon
         ctx.textAlign = 'center';
-        ctx.shadowColor = lvl.color;
-        ctx.shadowBlur = 14;
-        ctx.font = '34px Outfit, sans-serif';
-        ctx.fillText(lvl.icon, cx, y + 42);
-        ctx.restore();
+        ctx.font = '28px Outfit, sans-serif';
+        ctx.fillText(lvl.icon, cx, y + 40);
 
         // Label
         ctx.shadowColor = lvl.color;
@@ -2729,7 +2715,7 @@ if (currentState === 'MENU') {
         'rgba(255,255,255,0.30)';
 
     ctx.font =
-        '700 8px Outfit, sans-serif';
+        '700 8px "Arial Narrow", "Trebuchet MS", sans-serif';
 
     ctx.fillText(
         'STADIUM COMMAND',
@@ -2741,7 +2727,7 @@ if (currentState === 'MENU') {
         '#f5f8fb';
 
     ctx.font =
-        '900 50px Outfit, sans-serif';
+        '900 50px Impact, "Arial Narrow", sans-serif';
 
     ctx.shadowColor =
         'rgba(255,255,255,0.10)';
@@ -2758,7 +2744,7 @@ if (currentState === 'MENU') {
         '#45e4ff';
 
     ctx.font =
-        '900 46px Outfit, sans-serif';
+        '900 46px Impact, "Arial Narrow", sans-serif';
 
     ctx.shadowColor =
         'rgba(0,220,255,0.42)';
@@ -2810,12 +2796,12 @@ if (currentState === 'MENU') {
         'rgba(255,255,255,0.34)';
 
     ctx.font =
-        '700 8px Outfit, sans-serif';
+        '700 8px "Arial Narrow", sans-serif';
 
     ctx.fillText(
         'ARCADE FOOTBALL EXPERIENCE',
         panelX + 28,
-        panelY + 158
+        panelY + 165
     );
 
     // ------------------------------------------------------------
@@ -2831,42 +2817,42 @@ if (currentState === 'MENU') {
             key: '01',
             label: '1 VS 1',
             sub: 'LOCAL SHOWDOWN',
-            y: 219,
+            y: 222,
             color: '#46e5ff'
         },
         {
             key: '02',
             label: 'VS COMPUTER',
             sub: 'TEST YOUR LIMITS',
-            y: 268,
+            y: 271,
             color: '#55d9ff'
         },
         {
             key: '03',
             label: 'INSTRUCTIONS',
             sub: 'LEARN THE CONTROLS',
-            y: 317,
+            y: 320,
             color: '#ffd45a'
         },
         {
             key: '04',
             label: 'SETTINGS',
             sub: 'MATCH & AUDIO',
-            y: 366,
+            y: 369,
             color: '#ff7474'
         },
         {
             key: '05',
             label: 'STATS',
             sub: 'YOUR RECORD',
-            y: 415,
+            y: 418,
             color: '#bb91ff'
         },
         {
             key: '06',
             label: 'TOURNAMENT',
             sub: 'CHASE THE CUP',
-            y: 464,
+            y: 467,
             color: '#ffd45a'
         }
     ];
@@ -3046,7 +3032,7 @@ if (currentState === 'MENU') {
                 : 'rgba(255,255,255,0.24)';
 
         ctx.font =
-            '900 9px Outfit, sans-serif';
+            '900 9px "Arial Narrow", sans-serif';
 
         ctx.fillText(
             opt.key,
@@ -3061,7 +3047,7 @@ if (currentState === 'MENU') {
                 : 'rgba(255,255,255,0.88)';
 
         ctx.font =
-            '900 15px Outfit, sans-serif';
+            '800 16px Outfit, sans-serif';
 
         ctx.fillText(
             opt.label,
@@ -3076,7 +3062,7 @@ if (currentState === 'MENU') {
                 : 'rgba(255,255,255,0.28)';
 
         ctx.font =
-            '600 7px Outfit, sans-serif';
+            '600 8px Outfit, sans-serif';
 
         ctx.fillText(
             opt.sub,
@@ -3098,7 +3084,7 @@ if (currentState === 'MENU') {
                 : 'rgba(255,255,255,0.32)';
 
         ctx.font =
-            '900 23px Outfit, sans-serif';
+            '900 23px "Arial Narrow", sans-serif';
 
         ctx.fillText(
             '›',
@@ -3119,7 +3105,7 @@ if (currentState === 'MENU') {
         'rgba(255,255,255,0.17)';
 
     ctx.font =
-        '600 7px Outfit, sans-serif';
+        '600 7px "Arial Narrow", sans-serif';
 
     ctx.fillText(
         `MUSIC ${SoundManager.musicEnabled ? 'ON' : 'OFF'}   •   SFX ${SoundManager.sfxEnabled ? 'ON' : 'OFF'}`,
@@ -3541,7 +3527,7 @@ if (currentState === 'MENU') {
         'rgba(255,255,255,0.24)';
 
     ctx.font =
-        '700 8px Outfit, sans-serif';
+        '700 8px "Arial Narrow", sans-serif';
 
     ctx.fillText(
         'LIVE MATCH EXPERIENCE',
@@ -3568,7 +3554,7 @@ if (currentState === 'MENU') {
         'rgba(255,255,255,0.38)';
 
     ctx.font =
-        '800 8px Outfit, sans-serif';
+        '800 8px "Arial Narrow", sans-serif';
 
     ctx.fillText(
         'LIVE',
@@ -3579,13 +3565,14 @@ if (currentState === 'MENU') {
     // ============================================================
     // 12. FOOTER
     // ============================================================
-    // NOTE: the "MUSIC ON • SFX ON" status line used to be drawn here too,
-    // stacked almost exactly on top of the one inside the left glass panel
-    // (see section 8 above) — that's what the visible overlapping text in
-    // the corner was. This footer now only draws the tag, which is the
-    // only thing that belonged here.
 
     ctx.textAlign = 'right';
+
+    ctx.fillStyle =
+        'rgba(255,255,255,0.13)';
+
+    ctx.font =
+        '600 7px "Arial Narrow", sans-serif';
 
     ctx.fillText(
         'PRO STRIKER // WEB ARCADE',
