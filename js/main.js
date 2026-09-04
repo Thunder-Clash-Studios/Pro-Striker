@@ -219,9 +219,31 @@ function resetField() {
 
 function update(dt) {
     if (currentState === 'PAUSED') return;
-   
-    const ai = getAIConfigByDifficulty(difficulty);
-   
+
+    // Frame-rate independence: every movement constant in this file (ball
+    // speed, player/AI speed, goalkeeper speed) was tuned assuming a fixed
+    // ~60fps tick — e.g. "ball.x += ball.vx" just adds vx once per tick,
+    // which moves the ball proportionally faster on a 144Hz/165Hz display
+    // since the loop simply runs more often. dtFrames converts real elapsed
+    // time into "how many 60fps-frame-equivalents just happened" — exactly
+    // 1.0 at 60fps (so nothing changes there), and scaled correctly at any
+    // other refresh rate. This is the same conversion already used
+    // elsewhere in this file (see goalBannerTimer/aiStateTimer below) —
+    // multiplying every position update below by dtFrames extends that
+    // existing convention to movement instead of introducing a new one.
+    const dtFrames = dt * 60;
+
+    // PERF FIX (mobile FPS / CrazyGames phone preview): this used to call
+    // getAIConfigByDifficulty(difficulty) here, unconditionally, every
+    // single frame in every game state (including sitting on the menu) —
+    // but the result was never used anywhere below. It was pure waste:
+    // an object allocation plus two console.log calls, 60 times a second,
+    // forever. See the PERF FIX comment at the top of ai.js for why that
+    // console spam hit mobile (especially over CrazyGames' remote QR
+    // preview bridge) far harder than desktop. The AI config is still
+    // fetched exactly where it's actually needed further down (now a
+    // cheap cached lookup either way).
+
     updateParticles();
     updateCelebration();
     if (screenShake.duration > 0) {
@@ -420,7 +442,7 @@ if (isVSComputer || tournamentMode) {
             let dx = p.ejectTargetX - p.x, dy = p.ejectTargetY - p.y;
             let dist = Math.hypot(dx, dy);
             if (dist < 5) { p.x = p.ejectTargetX; p.y = p.ejectTargetY; p.ejecting = false; }
-            else { let speed = 5 + dist*0.05; if (speed>8) speed=8; p.x += (dx/dist)*speed; p.y += (dy/dist)*speed; }
+            else { let speed = 5 + dist*0.05; if (speed>8) speed=8; speed *= dtFrames; p.x += (dx/dist)*speed; p.y += (dy/dist)*speed; }
         }
         if (!keys.Shift) p.stamina = Math.min(1, p.stamina + 0.002);
     }
@@ -434,12 +456,12 @@ if (isVSComputer || tournamentMode) {
     for (let p of players) {
         if (p.isGk && ball.owner !== p) {
             if (p.team === 'red') {
-                p.y += gkSpeed * gkDirection.red;
+                p.y += gkSpeed * gkDirection.red * dtFrames;
                 if (p.y <= 210) { p.y = 210; gkDirection.red = 1; }
                 else if (p.y >= 390) { p.y = 390; gkDirection.red = -1; }
                 p.x = 50;
             } else {
-                p.y += gkSpeed * gkDirection.blue;
+                p.y += gkSpeed * gkDirection.blue * dtFrames;
                 if (p.y <= 210) { p.y = 210; gkDirection.blue = 1; }
                 else if (p.y >= 390) { p.y = 390; gkDirection.blue = -1; }
                 p.x = 850;
@@ -455,7 +477,7 @@ if (isVSComputer || tournamentMode) {
 
     if (activeRed && !activeRed.ejecting) {
         let nextX = activeRed.x, nextY = activeRed.y;
-        let speed = playerSpeed * (0.7 + 0.3 * activeRed.stamina);
+        let speed = playerSpeed * (0.7 + 0.3 * activeRed.stamina) * dtFrames;
         if (keys.Shift) { speed *= 1.5; activeRed.stamina -= 0.004; if (activeRed.stamina < 0) activeRed.stamina = 0; }
         if (keys.w) nextY -= speed;
         if (keys.s) nextY += speed;
@@ -475,7 +497,7 @@ if (isVSComputer || tournamentMode) {
     if (activeBlue && !activeBlue.ejecting) {
         let nextX = activeBlue.x, nextY = activeBlue.y;
         if (gameMode === '1v1') {
-            let speed = playerSpeed * (0.7 + 0.3 * activeBlue.stamina);
+            let speed = playerSpeed * (0.7 + 0.3 * activeBlue.stamina) * dtFrames;
             if (keys.Shift) { speed *= 1.5; activeBlue.stamina -= 0.004; if (activeBlue.stamina < 0) activeBlue.stamina = 0; }
             if (keys.ArrowUp) nextY -= speed;
             if (keys.ArrowDown) nextY += speed;
@@ -484,7 +506,7 @@ if (isVSComputer || tournamentMode) {
         } else {
             if (aiReactionTimer <= 0 && aiStartDelay <= 0) {
                 let aiCfg = getAIConfigByDifficulty(difficulty);
-                let aiSpeed = playerSpeed * aiCfg.speedMultiplier * (0.7 + 0.3 * activeBlue.stamina);
+                let aiSpeed = playerSpeed * aiCfg.speedMultiplier * (0.7 + 0.3 * activeBlue.stamina) * dtFrames;
                 if (ball.owner === activeBlue) {
                     aiHoldBallTimer++;
                     aiDribbleTime += 0.04;
@@ -614,10 +636,15 @@ if (isVSComputer || tournamentMode) {
             }
         }
     } else {
-        ball.x += ball.vx;
-        ball.y += ball.vy;
-        ball.vx *= 0.985;
-        ball.vy *= 0.985;
+        ball.x += ball.vx * dtFrames;
+        ball.y += ball.vy * dtFrames;
+        // Math.pow (not a plain *dtFrames scale) because this is a per-tick
+        // multiplicative decay, not a linear one — exponentiating by dtFrames
+        // is what keeps the total real-time deceleration rate the same
+        // regardless of how many ticks it gets applied over. At dtFrames=1
+        // (60fps) this reduces to exactly 0.985, same as before.
+        ball.vx *= Math.pow(0.985, dtFrames);
+        ball.vy *= Math.pow(0.985, dtFrames);
         if (Math.hypot(ball.vx, ball.vy) > 2) {
             ball.trail.push({x: ball.x, y: ball.y, life: 15});
             if (ball.trail.length > 20) ball.trail.shift();
