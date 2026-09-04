@@ -3,24 +3,46 @@
 * { margin:0; padding:0; box-sizing:border-box; -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; }
 
 html, body {
-    overflow: hidden;
-    position: fixed;
+    /* BUGFIX (mobile fit): this used to be overflow:hidden + position:fixed,
+       which locks the page rigidly to exactly 100dvh with ZERO way to move
+       if the real visible area ever comes out smaller than that (older iOS
+       without dvh support, Safari's toolbar animating mid-interaction,
+       unusual aspect ratios, etc). When that happened, part of the game or
+       the touch controls could end up sitting behind the browser chrome
+       with no way to reach them — a hard clip, not just a visual glitch.
+       Switching to overflow-y:auto turns that into a soft fallback: the
+       page centers normally and fits in one screen on the vast majority of
+       devices, but if it doesn't, the user can scroll a few pixels to bring
+       the rest into view instead of being stuck. This is safe with the
+       touch controls: the joystick/shoot buttons and canvas already set
+       their own touch-action:none and preventDefault() their own touch
+       events (see input.js), so gameplay dragging still can't trigger a
+       page scroll — only touches outside those elements can. */
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
     width: 100%;
     /* BUGFIX (iPhone Safari): 100% here inherits from 100vh below, which on
        iOS Safari measures against the viewport as if the address bar wasn't
        there — see the .game-wrapper comment below for the full explanation.
        100dvh (falls back to 100vh on older browsers that don't know it, via
        the plain declaration first) fixes it here too. */
-    height: 100vh;
-    height: 100dvh;
-    touch-action: none;
+    min-height: 100vh;
+    min-height: 100dvh;
 }
 
 body {
     background: radial-gradient(circle at center, #0f1720 0%, #06070a 100%);
-    display: flex; justify-content: center; align-items: center;
+    display: flex; justify-content: center;
+    /* "safe center" keeps the wrapper centered when it fits, but — unlike
+       plain center — still lets the user scroll up to reach content that
+       overflows past the top instead of that content being permanently
+       unreachable (plain center clips symmetrically off both edges with no
+       way to scroll to either). Browsers that don't know "safe" yet just
+       fall back to plain center, so this degrades safely. */
+    align-items: center;
+    align-items: safe center;
     min-height: 100vh; min-height: 100dvh; font-family: 'Outfit', sans-serif; color: #fff;
-    touch-action: none;
 }
 
 .game-wrapper {
