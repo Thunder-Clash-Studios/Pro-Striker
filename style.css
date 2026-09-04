@@ -6,14 +6,20 @@ html, body {
     overflow: hidden;
     position: fixed;
     width: 100%;
-    height: 100%;
+    /* BUGFIX (iPhone Safari): 100% here inherits from 100vh below, which on
+       iOS Safari measures against the viewport as if the address bar wasn't
+       there — see the .game-wrapper comment below for the full explanation.
+       100dvh (falls back to 100vh on older browsers that don't know it, via
+       the plain declaration first) fixes it here too. */
+    height: 100vh;
+    height: 100dvh;
     touch-action: none;
 }
 
 body {
     background: radial-gradient(circle at center, #0f1720 0%, #06070a 100%);
     display: flex; justify-content: center; align-items: center;
-    min-height: 100vh; font-family: 'Outfit', sans-serif; color: #fff;
+    min-height: 100vh; min-height: 100dvh; font-family: 'Outfit', sans-serif; color: #fff;
     touch-action: none;
 }
 
@@ -31,10 +37,27 @@ body {
        the viewport: width is capped at "however wide the screen is at a
        3:2 ratio for the available height" and vice versa. Whichever axis
        is the tighter constraint wins, and the wrapper always grows to fill
-       it — no more fixed 900x600 ceiling. */
+       it — no more fixed 900x600 ceiling.
+
+       BUGFIX 2 (iPhone Safari address bar): 100vh on iOS Safari is measured
+       against the viewport as though the address bar (and, in landscape,
+       the bottom Safari toolbar) weren't occupying screen space — because
+       iPhone Safari has no Fullscreen API to hide it (see conversation),
+       the bar is ALWAYS there taking up real pixels. The result: this box
+       used to compute a height a bit taller than what was actually visible,
+       clipping the bottom of the game off-screen and forcing a scroll to
+       see it — exactly the "give it a bit of scroll if not fullscreen"
+       symptom. 100dvh (dynamic viewport height) is a newer unit that
+       continuously measures the ACTUAL visible viewport, address bar and
+       all, and is supported in all current browsers including iOS Safari
+       15.4+. Declaring 100vh first keeps ancient browsers that don't know
+       dvh working via graceful degradation; 100dvh overrides it everywhere
+       that understands the newer unit. */
     position: relative;
     width: min(100vw, calc(100vh * 3 / 2));
+    width: min(100vw, calc(100dvh * 3 / 2));
     height: min(100vh, calc(100vw * 2 / 3));
+    height: min(100dvh, calc(100vw * 2 / 3));
     aspect-ratio: 3/2;
     border-radius: 16px;
     overflow: hidden;
@@ -100,7 +123,10 @@ canvas { display: block; width: 100%; height: 100%; background: #1a1a2e; image-r
     /* Fixed to the real viewport (not absolute-within-gameWrapper) — see the
        comment on this element in index.html for why: it needs to reach the
        true screen edges even when the 3:2 game box is letterboxed. */
-    position: fixed; top:0; left:0; width:100vw; height:100vh;
+    /* BUGFIX (iPhone Safari): same dvh fix as .game-wrapper above — without
+       it, the bottom joystick/shoot buttons could sit slightly below the
+       actually-visible area behind Safari's toolbar. */
+    position: fixed; top:0; left:0; width:100vw; height:100vh; height:100dvh;
     pointer-events: none; display: none; z-index:20;
 }
 .touch-controls.is-active { display:block !important; }
@@ -117,6 +143,7 @@ canvas { display: block; width: 100%; height: 100%; background: #1a1a2e; image-r
     border-radius: 50%;
     display: flex; justify-content: center; align-items: center;
     pointer-events: auto; touch-action: none;
+    -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
     box-shadow: 0 0 30px rgba(0,0,0,0.5);
     transition: all 0.3s ease;
@@ -124,10 +151,19 @@ canvas { display: block; width: 100%; height: 100%; background: #1a1a2e; image-r
 }
 .joystick-base:active { transform:scale(0.95); }
 .joystick-stick {
+    /* BUGFIX (iPhone): this used to be background-only at 60% opacity,
+       relying on the base's translucent glass (backdrop-filter blur) behind
+       it for contrast. backdrop-filter support/behavior is inconsistent
+       across iOS Safari versions and can render weaker or not at all in
+       some stacking contexts — when it does, this stick nearly disappears
+       against the base, which is exactly "I can't see the joystick move."
+       Added a solid border + shadow so the stick reads clearly by its own
+       outline regardless of what's rendering behind it, on any device. */
     width:38%; height:38%;
-    background: rgba(255,255,255,0.6);
+    background: rgba(255,255,255,0.85);
+    border: 1.5px solid rgba(255,255,255,0.95);
     border-radius:50%;
-    box-shadow: 0 0 15px rgba(255,255,255,0.2);
+    box-shadow: 0 0 12px rgba(0,0,0,0.4), 0 0 15px rgba(255,255,255,0.3);
     pointer-events: none;
     transition: transform 0.05s linear;
 }
@@ -174,28 +210,12 @@ canvas { display: block; width: 100%; height: 100%; background: #1a1a2e; image-r
              env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
 }
 
-.fullscreen-btn {
-    position: absolute;
-    top: calc(12px + env(safe-area-inset-top, 0px));
-    right: calc(12px + env(safe-area-inset-right, 0px));
-    width: 38px;
-    height: 38px;
-    background: rgba(15,20,25,0.7);
-    border: 1.5px solid rgba(255,255,255,0.25);
-    border-radius: 50%;
-    color: rgba(255,255,255,0.85);
-    display: none;
-    justify-content: center;
-    align-items: center;
-    z-index: 50;
-    cursor: pointer;
-    pointer-events: auto;
-    touch-action: manipulation;
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    transition: transform 0.15s ease, background 0.15s ease;
-}
-.fullscreen-btn:active { transform: scale(0.88); background: rgba(15,20,25,0.9); }
+/* NOTE (CrazyGames build): .fullscreen-btn styling removed — this build's
+   index.html no longer includes the button element. CrazyGames prohibits
+   custom in-game fullscreen buttons and handles fullscreen entirely on
+   their end (see requirements doc). Leaving unused CSS for a removed
+   element behind isn't a functional problem, but it's dead weight worth
+   dropping for a clean submission build. */
 
 @media (max-width: 420px) {
     /* BUGFIX: these !important overrides were still using the OLD sizes
