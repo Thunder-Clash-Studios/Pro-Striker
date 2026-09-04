@@ -1,31 +1,9 @@
 // ===== PRO STRIKER - ai.js =====
 console.log('[ProStriker] ai.js loaded');
 
-// ============================================================
-// PERF FIX (mobile FPS / CrazyGames phone preview): getAIConfig() and
-// getAIConfigByDifficulty() used to be called unconditionally EVERY FRAME
-// from main.js's update(dt) loop (once always, and again during PvE while
-// the AI is active) — and every single call built a brand-new config
-// object from scratch AND fired two console.log() calls. That's ~120
-// console.log calls/sec + 60 object allocations/sec, forever, even sitting
-// on the menu. Desktop devtools swallow that for free; CrazyGames' phone/
-// QR preview pipes console output over a remote logging bridge that is
-// dramatically slower per-call on real mobile hardware, so this alone was
-// very likely the majority of the "PC smooth, phone preview laggy" gap.
-// Fix: removed the per-call logging entirely, and cache one config object
-// per difficulty so repeated calls with the same difficulty are a free
-// object-lookup instead of a rebuild.
-// ============================================================
-const _aiConfigCache = {};
-
 function getAIConfig(difficulty) {
-    if (_aiConfigCache[difficulty]) return _aiConfigCache[difficulty];
-    const cfg = buildAIConfig(difficulty);
-    _aiConfigCache[difficulty] = cfg;
-    return cfg;
-}
-
-function buildAIConfig(difficulty) {
+    console.log('[AI] Getting config for difficulty:', difficulty);
+    
     if (difficulty === 'EASY') {
         return {
             speedMultiplier: 0.58,
@@ -99,10 +77,11 @@ function buildAIConfig(difficulty) {
             aiStartDelay: 36 // 0.6 seconds
         };
     } else if (difficulty === 'ELITE') {
-        return buildEliteAIConfig();
+        return getEliteAIConfig();
     } else if (difficulty === 'WORLD_CLASS') {
-        return buildWorldClassAIConfig();
+        return getWorldClassAIConfig();
     } else {
+        console.warn('[AI] Unknown difficulty, defaulting to MEDIUM:', difficulty);
         return {
             speedMultiplier: 0.72,
             shootRange: 360,
@@ -138,26 +117,25 @@ function getAIConfigByTier(tier) {
         'WORLD_CLASS': 'WORLD_CLASS'
     };
     const difficulty = aiMap[tier] || 'MEDIUM';
+    console.log('[AI] Tier', tier, '→ Difficulty:', difficulty);
     return getAIConfigByDifficulty(difficulty);
 }
 
 function getAIConfigByDifficulty(difficulty) {
-    // Every branch now resolves through getAIConfig(), which caches by
-    // difficulty — this function itself is safe to call every frame (as
-    // main.js's update() does during PvE) since it no longer builds
-    // anything or logs anything on repeat calls.
+    console.log('[AI] Getting config by difficulty:', difficulty);
     switch(difficulty) {
         case 'EASY': return getAIConfig('EASY');
         case 'MEDIUM': return getAIConfig('MEDIUM');
         case 'HARD': return getAIConfig('HARD');
-        case 'ELITE': return getAIConfig('ELITE');
-        case 'WORLD_CLASS': return getAIConfig('WORLD_CLASS');
-        default:
+        case 'ELITE': return getEliteAIConfig();
+        case 'WORLD_CLASS': return getWorldClassAIConfig();
+        default: 
+            console.warn('[AI] Unknown difficulty in switch:', difficulty);
             return getAIConfig('MEDIUM');
     }
 }
 
-function buildEliteAIConfig() {
+function getEliteAIConfig() {
     return {
         speedMultiplier: 0.94,
         shootRange: 370,
@@ -183,7 +161,7 @@ function buildEliteAIConfig() {
     };
 }
 
-function buildWorldClassAIConfig() {
+function getWorldClassAIConfig() {
     return {
         speedMultiplier: 0.98,
         shootRange: 380,
