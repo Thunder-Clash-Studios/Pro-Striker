@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>Pro Striker – Ultimate Football</title>
+    <link rel="icon" type="image/png" href="images/goal.png" />
+    <link rel="stylesheet" href="style.css" />
+    <script>
+        // Shared fallback for every <img src="images/football.png">: if the
+        // real artwork ever fails to load (missing file, blocked, wrong
+        // path on some portal), swap in a small inline SVG ball instead of
+        // leaving a broken-image icon. Built with encodeURIComponent so it
+        // never has to fight HTML/JS attribute quoting.
+        function footballImgFallback(img) {
+            img.onerror = null;
+            var svg = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\">" +
+                "<defs><radialGradient id=\"g\" cx=\"35%\" cy=\"30%\" r=\"75%\">" +
+                "<stop offset=\"0\" stop-color=\"#fff\"/><stop offset=\".6\" stop-color=\"#eef1f4\"/>" +
+                "<stop offset=\"1\" stop-color=\"#aab4bf\"/></radialGradient></defs>" +
+                "<circle cx=\"50\" cy=\"50\" r=\"47\" fill=\"url(#g)\" stroke=\"#151b23\" stroke-width=\"3\"/>" +
+                "<polygon points=\"50,33 66,45 60,64 40,64 34,45\" fill=\"#171e27\"/>" +
+                "<g stroke=\"#171e27\" stroke-width=\"2.4\" stroke-linecap=\"round\">" +
+                "<path d=\"M50 33 L50 8 M66 45 L90 37 M60 64 L74 86 M40 64 L26 86 M34 45 L10 37\"/></g>" +
+                "<g fill=\"#171e27\"><polygon points=\"50,3 61,10 39,10\"/>" +
+                "<polygon points=\"95,38 92,52 82,42\"/><polygon points=\"78,89 64,92 70,80\"/>" +
+                "<polygon points=\"22,89 36,92 30,80\"/><polygon points=\"5,38 8,52 18,42\"/></g></svg>";
+            img.src = "data:image/svg+xml," + encodeURIComponent(svg);
+        }
+    </script>
+
+    <style>
+        #loadingScreen {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: radial-gradient(circle, #0f1720, #06070a);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            font-family: 'Outfit', sans-serif;
+            transition: opacity 0.8s ease;
+        }
+        #loadingScreen.hidden { opacity: 0; pointer-events: none; }
+        .loader { width: 60px; height: 60px; border: 4px solid rgba(255,255,255,0.1); border-top: 4px solid #f1c40f; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #loadingScreen h1 { color: white; font-size: 32px; margin-top: 30px; background: linear-gradient(135deg, #f1c40f, #e74c3c); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        #loadingScreen p { color: rgba(255,255,255,0.5); margin-top: 10px; font-size: 14px; }
+        .progress-bar { width: 200px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-top: 20px; overflow: hidden; }
+        .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #f1c40f, #e74c3c); border-radius: 2px; transition: width 0.3s ease; }
+        
+        #gameWrapper {
+            position: relative;
+            width: min(100vw, calc(100vh * 3 / 2));
+            height: min(100vh, calc(100vw * 2 / 3));
+            aspect-ratio: 3/2;
+            overflow: hidden;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.06);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.85), inset 0 0 60px rgba(255,255,255,0.02);
+            background: linear-gradient(180deg, #11121b 0%, #101226 60%);
+            flex-shrink: 0;
+            touch-action: none;
+        }
+        
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background: #0b0f19;
+            image-rendering: auto;
+            touch-action: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="touchControls" class="touch-controls mode-1v1">
+        <div id="p1Joystick" class="joystick-base p1-joy"><div class="joystick-stick"></div></div>
+        <button id="p1Shoot" class="shoot-btn p1-shoot" aria-label="Shoot P1"><img src="images/football.png" onerror="footballImgFallback(this)" alt="" draggable="false"></button>
+        <div id="p2Joystick" class="joystick-base p2-joy"><div class="joystick-stick"></div></div>
+        <button id="p2Shoot" class="shoot-btn p2-shoot" aria-label="Shoot P2"><img src="images/football.png" onerror="footballImgFallback(this)" alt="" draggable="false"></button>
+    </div>
+    <div id="rotateWarning" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.92); z-index:200; justify-content:center; align-items:center; flex-direction:column; color:white; text-align:center; padding:20px; font-family:'Outfit',sans-serif;">
+        <img src="images/phone.png" alt="" style="width:72px; height:72px; margin-bottom:20px;">
+        <h2 style="margin-bottom:10px;">Please Rotate Your Device</h2>
+        <p style="opacity:0.7; max-width:300px;">Pro Striker works best in landscape mode. Rotate your phone for the best experience.</p>
+    </div>
+    <div class="stadium-crowd left" aria-hidden="true"></div>
+    <div class="stadium-crowd right" aria-hidden="true"></div>
+    <div id="gameWrapper" class="game-wrapper">
+        <div id="loadingScreen">
+            <div class="loader"></div>
+            <h1><img src="images/football.png" onerror="footballImgFallback(this)" alt="" style="height:32px; width:32px; vertical-align:middle; margin-right:8px;"> PRO STRIKER</h1>
+            <p>Loading the beautiful game...</p>
+            <div class="progress-bar"><div class="progress-fill" id="loadProgress"></div></div>
+        </div>
+        <canvas id="gameCanvas" width="900" height="600"></canvas>
+        <div id="goalFlash" class="goal-flash"></div>
+        <div id="celebrationOverlay" class="celebration-overlay"></div>
+    </div>
+
+    <!-- ===== Portal SDKs: loaded conditionally by hostname =====
+         Each portal's own docs say to embed their snippet directly in
+         index.html, and GameMonetize's "Verify SDK in the game" / "Verify
+         Game" check works by actually loading the game LIVE on
+         gamemonetize.com and watching for the SDK to report in at runtime —
+         it is not a static text scan of this file. That means these can
+         safely load only on their own domain instead of all three loading
+         unconditionally on every host:
+           - Nothing extra is fetched (or runs) when the game is played on
+             a portal it doesn't belong to, or self-hosted/tested locally.
+           - CrazyGames' QA team only ever sees the CrazyGames SDK tag when
+             reviewing the game on crazygames.com - no unfamiliar
+             third-party ad-network scripts in the page source they check.
+           - Each adapter (js/platform/adapters/...) still adopts whichever
+             SDK actually loaded via window.SDK_OPTIONS / window.GD_OPTIONS,
+             exactly as before; only WHEN the script tag is inserted changed.
+         If a portal ever proxies/rewrites the page under its own domain
+         differently than expected, the adapter's own JS-injected fallback
+         (see gameMonetizeAdapter.js / gameDistributionAdapter.js) still
+         covers it - this is a fast path, not the only path. -->
+    <script>
+        (function () {
+            var host = window.location.hostname || '';
+            function addScript(src, id, attrs) {
+                if (document.getElementById(id)) return;
+                var el = document.createElement('script');
+                el.id = id;
+                el.src = src;
+                if (attrs) for (var k in attrs) el[k] = attrs[k];
+                document.head.appendChild(el);
+            }
+
+            if (/gamemonetize/i.test(host)) {
+                window.SDK_OPTIONS = {
+                    gameId: 'rua9zsifeg0s7558al2qu896560zteeo',
+                    onEvent: function (a) {
+                        window.__gmEventQueue = window.__gmEventQueue || [];
+                        if (window.__gmEventHandler) window.__gmEventHandler(a);
+                        else window.__gmEventQueue.push(a);
+                    }
+                };
+                addScript('https://api.gamemonetize.com/sdk.js', 'gamemonetize-sdk');
+            } else if (/gamedistribution/i.test(host)) {
+                window.GD_OPTIONS = {
+                    gameId: 'c8902e23cc084c16bab3af1f83da0454',
+                    onEvent: function (event) {
+                        window.__gdEventQueue = window.__gdEventQueue || [];
+                        if (window.__gdEventHandler) window.__gdEventHandler(event);
+                        else window.__gdEventQueue.push(event);
+                    }
+                };
+                addScript('https://html5.api.gamedistribution.com/main.min.js', 'gamedistribution-jssdk');
+            } else if (/crazygames/i.test(host)) {
+                // Only load the CrazyGames SDK when the game is actually running on
+                // a supported CrazyGames host. Localhost / unsupported hosts remain
+                // fully ad-free by design.
+                addScript('https://sdk.crazygames.com/crazygames-sdk-v3.js', 'crazygames-sdk');
+            }
+            // Any other host (itch.io, Newgrounds, a personal site, GitHub
+            // Pages, etc.): no portal SDK script is requested at all. The
+            // game runs fully ads-disabled via genericWebAdapter.js.
+        })();
+    </script>
+
+    <!-- Platform / ads layer (CrazyGames SDK + no-ads fallback) -->
+    <script src="js/platform/platformConfig.js?v=20261001v1"></script>
+<script src="js/cloudSync.js?v=20261001v1"></script>
+<script src="js/platform/adapters/crazyGamesAdapter.js?v=20261001v1"></script>
+<script src="js/platform/adapters/gameMonetizeAdapter.js?v=20261001v1"></script>
+<script src="js/platform/adapters/gameDistributionAdapter.js?v=20261001v1"></script>
+<script src="js/platform/adapters/genericWebAdapter.js?v=20261001v1"></script>
+<script src="js/platform/platformSDK.js?v=20261001v1"></script>
+<script src="js/platform/adManager.js?v=20261001v1"></script>
+
+    <script src="js/globals.js?v=20261001v1"></script>
+    <script src="js/sound.js?v=20261001v1"></script>
+    <script src="js/ai.js?v=20261001v1"></script>
+    <script src="js/physics.js?v=20261001v1"></script>
+    <script src="js/renderer.js?v=20261001v5"></script>
+    <script src="js/tournamentData.js?v=20261001v1"></script>
+    <script src="js/tournament.js?v=20261001v1"></script>
+    <script src="js/input.js?v=20261001v5"></script>
+    <script src="js/icons.js?v=20261001v1"></script>
+    <script src="js/menu.js?v=20261001v2"></script>
+    <script src="js/theme.js?v=20261001v11"></script>
+    <script src="js/credits.js?v=20261001v1"></script>
+    <script src="js/shop.js?v=20261001v2"></script>
+    <script src="js/progress.js?v=20261001v1"></script>
+    <script src="js/progressUI.js?v=20261001v1"></script>
+    <script src="js/tutorial.js?v=20261001v2"></script>
+    <script src="js/main.js?v=20261001v6"></script>
+
+    <script>
+        let progress = 0;
+        const loadInterval = setInterval(() => {
+            progress += Math.random() * 15;
+            if (progress > 100) progress = 100;
+            document.getElementById('loadProgress').style.width = progress + '%';
+            if (progress >= 100) {
+                clearInterval(loadInterval);
+                setTimeout(() => document.getElementById('loadingScreen').classList.add('hidden'), 500);
+            }
+        }, 100);
+
+        window.addEventListener('load', () => {
+            const tryStart = () => {
+                if (typeof window.bootstrap === 'function') window.bootstrap();
+                else setTimeout(tryStart, 50);
+            };
+            tryStart();
+        });
+
+        function checkOrientation() {
+            const warning = document.getElementById('rotateWarning');
+            if (!warning) return;
+            const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
+            const isPortrait = window.innerHeight > window.innerWidth;
+            if (isMobile && isPortrait) {
+                warning.style.display = 'flex';
+            } else {
+                warning.style.display = 'none';
+            }
+        }
+        window.addEventListener('resize', checkOrientation);
+        window.addEventListener('orientationchange', checkOrientation);
+        checkOrientation();
+    </script>
+</body>
+</html>
