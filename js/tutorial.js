@@ -158,7 +158,10 @@ const TutorialManager = {
                         if (keys.space) { shootTutorialBall(p); keys.space = false; }
                     } else if (!ball.owner) {
                         this._simpleBallFlight();
-                        if (ball.x + ball.radius >= 875 && ball.y > 200 && ball.y < 400) return true;
+                        if (ball.x + ball.radius >= 875 && ball.y > 200 && ball.y < 400) {
+                            ball.vx = 0; ball.vy = 0;
+                            return true;
+                        }
                         this._checkReclaim(p);
                     }
                     return false;
@@ -231,7 +234,7 @@ const TutorialManager = {
                     if (ball.owner === opp) { ball.x = opp.x; ball.y = opp.y; }
                     const dist = Math.hypot(p.x - opp.x, p.y - opp.y);
                     if (dist < p.radius + opp.radius + 2 && ball.owner === opp) {
-                        const tackleAngle = Math.atan2(p.y - opp.y, p.x - opp.x);
+                        const tackleAngle = Math.atan2(opp.y - p.y, opp.x - p.x);
                         ball.owner = null;
                         ball.vx = Math.cos(tackleAngle) * 5;
                         ball.vy = Math.sin(tackleAngle) * 5;
@@ -395,7 +398,7 @@ const TutorialManager = {
                         const distToDef = Math.hypot(p.x - opp.x, p.y - opp.y);
                         if (distToDef < p.radius + opp.radius + 2) {
                             ball.owner = null;
-                            const tackleAngle = Math.atan2(p.y - opp.y, p.x - opp.x);
+                            const tackleAngle = Math.atan2(opp.y - p.y, opp.x - p.x);
                             ball.vx = Math.cos(tackleAngle) * 5;
                             ball.vy = Math.sin(tackleAngle) * 5;
                             this._defTackleFlash = 30;
@@ -407,7 +410,10 @@ const TutorialManager = {
                         }
                     } else if (!ball.owner) {
                         this._simpleBallFlight();
-                        if (ball.x + ball.radius >= 875 && ball.y > 200 && ball.y < 400) return true;
+                        if (ball.x + ball.radius >= 875 && ball.y > 200 && ball.y < 400) {
+                            ball.vx = 0; ball.vy = 0;
+                            return true;
+                        }
                         this._checkReclaim(p);
                     }
                     return false;
