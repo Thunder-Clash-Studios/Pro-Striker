@@ -49,7 +49,7 @@ const AD_STRATEGY = {
     // CrazyGames disables ads during Basic Launch. Keep false for the Basic
     // submission (hides every rewarded button), set true for Full Launch.
     crazyGamesRewardedEnabled: false,
-    lockedTeamRewardedUnlockEnabled: false,
+    lockedTeamRewardedUnlockEnabled: true,
     lockedTeamIds: [0, 1, 2, 3, 4, 6]
 };
 
